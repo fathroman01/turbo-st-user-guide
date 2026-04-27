@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turbo ST User Guide</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <meta name="description" content="Dokumentasi resmi dan panduan penggunaan aplikasi Turbo ST.">
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="logo-container">
+                <div class="logo-icon">
+                    <img src="logo.png" alt="Logo">
+                </div>
+                <div class="logo-text">
+                    <span class="title-small">Panduan Pengguna</span>
+                    <span class="title-large">TURBO ST</span>
+                </div>
+            </div>
+            
+            <nav>
+                <ul class="nav-menu" id="nav-menu">
+                    <!-- Nav items will be injected here -->
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-wrapper">
+            <header class="top-bar">
+                <div class="search-box">
+                    <i data-lucide="search" style="width: 18px; color: var(--text-muted);"></i>
+                    <input type="text" class="search-input" placeholder="Cari panduan..." id="search-input">
+                </div>
+                <div class="breadcrumb">
+                    <a href="#" class="breadcrumb-link" id="breadcrumb-app">Dokumentasi</a>
+                    <i data-lucide="chevron-right" style="width: 14px; margin: 0 0.5rem; color: var(--text-muted);"></i>
+                    <span id="breadcrumb-current">Beranda</span>
+                </div>
+                
+                <div class="cms-controls" id="cms-actions" style="display: none;">
+                    <div class="cms-toolbar">
+                        <button class="btn btn-outline" id="btn-add-h2" title="Sub Judul"><i data-lucide="heading-2" style="width: 16px;"></i></button>
+                        <button class="btn btn-outline" id="btn-add-text" title="Paragraf Baru"><i data-lucide="type" style="width: 16px;"></i></button>
+                        <div class="toolbar-divider"></div>
+                        <button class="btn btn-outline btn-format" id="btn-undo" title="Undo (Ctrl+Z)"><i data-lucide="undo" style="width: 16px;"></i></button>
+                        <button class="btn btn-outline btn-format" id="btn-redo" title="Redo (Ctrl+Y)"><i data-lucide="redo" style="width: 16px;"></i></button>
+                        <div class="toolbar-divider"></div>
+                        <button class="btn btn-outline btn-format" id="btn-bold" title="Tebal (Ctrl+B)"><i data-lucide="bold" style="width: 16px;"></i></button>
+                        <button class="btn btn-outline btn-format" id="btn-italic" title="Miring (Ctrl+I)"><i data-lucide="italic" style="width: 16px;"></i></button>
+                        <button class="btn btn-outline btn-format" id="btn-normal" title="Normal/Hapus Format"><i data-lucide="eraser" style="width: 16px;"></i></button>
+                        <div class="toolbar-divider"></div>
+                        <button class="btn btn-outline" id="btn-add-list" title="Langkah-langkah"><i data-lucide="list-ordered" style="width: 16px;"></i></button>
+                        <button class="btn btn-outline" id="btn-add-bullets" title="Point-point"><i data-lucide="list" style="width: 16px;"></i></button>
+                        <div class="toolbar-divider"></div>
+                        <button class="btn btn-outline" id="btn-add-link" title="Tambah Link"><i data-lucide="link" style="width: 16px;"></i></button>
+                        <button class="btn btn-outline" id="btn-add-image" title="Gambar"><i data-lucide="image" style="width: 16px;"></i></button>
+                        <div class="toolbar-divider"></div>
+                        <button class="btn btn-outline" id="btn-add-success" title="Hasil/Selesai"><i data-lucide="check-circle-2" style="width: 16px;"></i></button>
+                        <button class="btn btn-outline" id="btn-add-callout" title="Catatan Penting"><i data-lucide="alert-circle" style="width: 16px;"></i></button>
+                        <div class="toolbar-divider"></div>
+                        <button class="btn btn-outline" id="btn-add-page" title="Tambah Bab Baru"><i data-lucide="plus-square" style="width: 16px;"></i></button>
+                        <button class="btn btn-outline" id="btn-add-group" title="Tambah Grup Baru"><i data-lucide="folder-plus" style="width: 16px;"></i></button>
+                        <button class="btn btn-outline" id="btn-export" title="Ekspor Data (Backup)"><i data-lucide="download" style="width: 16px;"></i></button>
+                        <button class="btn btn-outline" id="btn-import" title="Impor Data (Restore)"><i data-lucide="upload" style="width: 16px;"></i></button>
+                        <button class="btn btn-outline" id="btn-cancel-cms">Batal</button>
+                        <button class="btn btn-primary" id="btn-save-cms">Simpan Semua</button>
+                    </div>
+                </div>
+            </header>
+
+            <div class="content-area" id="content-root">
+                <div class="article-body">
+                    <article class="animate-fade">
+                        <div class="page-header">
+                            <h1 class="page-title" id="page-title" contenteditable="false">Beranda</h1>
+                            <p class="page-description" id="page-description" contenteditable="false">Selamat datang di panduan aplikasi Turbo ST.</p>
+                        </div>
+
+                        <div class="prose" id="page-content" contenteditable="false">
+                            <!-- Content will be injected here -->
+                        </div>
+
+                        <div class="page-nav">
+                            <a href="#" class="nav-card" id="nav-prev">
+                                <span class="nav-card-label">Sebelumnya</span>
+                                <span class="nav-card-title" id="nav-prev-title">Judul Bab</span>
+                            </a>
+                            <a href="#" class="nav-card" id="nav-next" style="text-align: right;">
+                                <span class="nav-card-label">Selanjutnya</span>
+                                <span class="nav-card-title" id="nav-next-title">Judul Bab</span>
+                            </a>
+                        </div>
+                    </article>
+                </div>
+
+                <div class="toc-container">
+                    <div class="toc-sticky">
+                        <h3 class="toc-title">Isi Halaman</h3>
+                        <ul class="toc-list" id="toc-list">
+                            <!-- TOC items will be injected here -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <button id="toggle-cms" class="btn-primary">
+        <i data-lucide="edit-3" style="width: 16px;"></i> Mode Admin
+    </button>
+
+    <!-- Modal Add Page -->
+    <div id="modal-add-page" class="modal">
+        <div class="modal-content">
+            <h3>Tambah Bab Baru</h3>
+            <div class="form-group">
+                <label>Judul Bab</label>
+                <input type="text" id="new-page-title" placeholder="Contoh: Cara Login">
+            </div>
+            <div class="form-group">
+                <label>Ikon (Nama Lucide)</label>
+                <input type="text" id="new-page-icon" placeholder="file-text, settings, etc.">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="btn-cancel-modal">Batal</button>
+                <button class="btn btn-primary" id="btn-confirm-add-page">Tambah</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Internal Link -->
+    <div id="modal-link" class="modal">
+        <div class="modal-content">
+            <h3>Tautkan ke Halaman</h3>
+            <div class="form-group">
+                <label>Pilih Halaman Tujuan</label>
+                <select id="link-target-page"></select>
+            </div>
+            <div class="form-group" id="group-link-hash" style="display: none;">
+                <label>Pilih Sub Judul (Opsional)</label>
+                <select id="link-target-hash"></select>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" id="btn-remove-link" style="margin-right: auto; display: none;">Hapus Link</button>
+                <button class="btn btn-outline" id="btn-cancel-link">Batal</button>
+                <button class="btn btn-primary" id="btn-confirm-link">Simpan Link</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
