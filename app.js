@@ -33,7 +33,7 @@ class DocApp {
         this.btnToggleCMS = document.getElementById('toggle-cms');
         this.cmsActions = document.getElementById('cms-actions');
         this.btnSave = document.getElementById('btn-save-cms');
-        this.btnCancelCMS = document.getElementById('btn-cancel-cms');
+        this.btnLogoutCMS = document.getElementById('btn-logout-cms');
         this.btnAddH2 = document.getElementById('btn-add-h2');
         this.btnAddText = document.getElementById('btn-add-text');
         this.btnAddList = document.getElementById('btn-add-list');
@@ -94,6 +94,11 @@ class DocApp {
             this.setupEventListeners();
             lucide.createIcons();
             console.log("Data berhasil dimuat dari Cloud!");
+            
+            // Check admin session
+            if (sessionStorage.getItem('isAdminLoggedIn') === 'true') {
+                this.enableAdminMode();
+            }
         } else {
             console.error("Gagal memuat data. Periksa konfigurasi Firebase Anda.");
             alert("Gagal terhubung ke Cloud. Pastikan API Key sudah benar.");
@@ -383,14 +388,22 @@ class DocApp {
     }
 
     setupEventListeners() {
-        this.btnToggleCMS.addEventListener('click', () => this.toggleAdminMode());
+        if (this.btnToggleCMS) {
+            this.btnToggleCMS.addEventListener('click', () => this.toggleAdminMode());
+        }
         this.btnSave.addEventListener('click', async () => {
             this.updateCurrentPageData();
             await this.saveData();
-            this.toggleAdminMode();
+            // Just save, keep admin mode active
+            alert("Perubahan disimpan!");
         });
 
-        this.btnCancelCMS.addEventListener('click', () => this.cancelEdit());
+        if (this.btnLogoutCMS) {
+            this.btnLogoutCMS.addEventListener('click', () => {
+                sessionStorage.removeItem('isAdminLoggedIn');
+                window.location.reload();
+            });
+        }
 
         // Prevent focus loss when clicking toolbar buttons
         this.cmsActions.addEventListener('mousedown', (e) => {
@@ -640,15 +653,12 @@ class DocApp {
         this.navigateTo(id);
     }
 
-    toggleAdminMode() {
-        this.isAdminMode = !this.isAdminMode;
-        document.body.classList.toggle('admin-mode', this.isAdminMode);
-        this.cmsActions.style.display = this.isAdminMode ? 'block' : 'none';
-        this.btnToggleCMS.innerHTML = this.isAdminMode ?
-            '<i data-lucide="eye" style="width: 16px;"></i> Selesai Edit' :
-            '<i data-lucide="edit-3" style="width: 16px;"></i> Mode Admin';
+    enableAdminMode() {
+        this.isAdminMode = true;
+        document.body.classList.add('admin-mode');
+        this.cmsActions.style.display = 'block';
 
-        const isEditable = this.isAdminMode ? 'true' : 'false';
+        const isEditable = 'true';
         this.pageTitle.contentEditable = isEditable;
         this.pageDesc.contentEditable = isEditable;
         this.pageContent.contentEditable = isEditable;

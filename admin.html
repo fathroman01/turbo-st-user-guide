@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Admin - Turbo ST User Guide</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: var(--bg-sidebar);
+            margin: 0;
+        }
+        .login-card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            animation: slideUp 0.4s ease-out;
+        }
+        .logo-icon {
+            margin: 0 auto 1.5rem;
+            width: 72px;
+            height: 72px;
+        }
+        .login-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+        }
+        .login-desc {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+        }
+        .input-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+        .input-group label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-main);
+        }
+        .input-group input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.2s;
+            box-sizing: border-box;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+        }
+        .btn-login {
+            width: 100%;
+            padding: 0.875rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-login:hover {
+            background: #1d4ed8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 1.5rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.875rem;
+            transition: color 0.2s;
+        }
+        .back-link:hover {
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="logo-icon">
+            <img src="logo.png" alt="Logo Turbo ST">
+        </div>
+        <h1 class="login-title">Admin Akses</h1>
+        <p class="login-desc">Masukkan password untuk mengelola panduan.</p>
+        
+        <form id="login-form">
+            <div class="input-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Masukkan password admin..." required autofocus>
+            </div>
+            <button type="submit" class="btn-login">Masuk ke Mode Admin</button>
+        </form>
+        
+        <a href="index.html" class="back-link"><i data-lucide="arrow-left" style="width: 14px; display: inline; vertical-align: middle; margin-right: 4px;"></i> Kembali ke Panduan</a>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        document.getElementById('login-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const pw = document.getElementById('password').value;
+            if (pw === 'admin123') { // Ganti password admin di sini jika perlu
+                sessionStorage.setItem('isAdminLoggedIn', 'true');
+                window.location.href = 'index.html';
+            } else {
+                alert('Password salah!');
+                document.getElementById('password').value = '';
+                document.getElementById('password').focus();
+            }
+        });
+
+        // Redirect if already logged in
+        if (sessionStorage.getItem('isAdminLoggedIn') === 'true') {
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
