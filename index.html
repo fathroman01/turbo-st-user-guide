@@ -42,6 +42,9 @@
         <!-- Main Content -->
         <main class="main-wrapper">
             <header class="top-bar">
+                <button class="btn-icon mobile-menu-btn" id="mobile-menu-btn" title="Menu">
+                    <i data-lucide="menu" style="width: 20px;"></i>
+                </button>
                 <div class="search-box">
                     <i data-lucide="search" style="width: 18px; color: var(--text-muted);"></i>
                     <input type="text" class="search-input" placeholder="Cari panduan..." id="search-input">
@@ -119,6 +122,8 @@
             </div>
         </main>
     </div>
+    
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
     <button id="toggle-cms" class="btn-primary">
         <i data-lucide="edit-3" style="width: 16px;"></i> Mode Admin

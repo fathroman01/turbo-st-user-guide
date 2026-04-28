@@ -3,12 +3,13 @@ import { initialData } from './data.js';
 // --- KONFIGURASI FIREBASE ---
 // Ganti dengan konfigurasi dari Firebase Console Anda!
 const firebaseConfig = {
-    apiKey: "PASTE_YOUR_API_KEY_HERE",
-    authDomain: "PASTE_YOUR_PROJECT_ID_HERE.firebaseapp.com",
-    projectId: "PASTE_YOUR_PROJECT_ID_HERE",
-    storageBucket: "PASTE_YOUR_PROJECT_ID_HERE.appspot.com",
-    messagingSenderId: "PASTE_YOUR_SENDER_ID_HERE",
-    appId: "PASTE_YOUR_APP_ID_HERE"
+    apiKey: "AIzaSyCAHB2w_pIVkvwfKCxkMOVSFaRKTGu9JRo",
+    authDomain: "turbo-st-docs.firebaseapp.com",
+    databaseURL: "https://turbo-st-docs-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "turbo-st-docs",
+    storageBucket: "turbo-st-docs.firebasestorage.app",
+    messagingSenderId: "653814096123",
+    appId: "1:653814096123:web:fef2df2361b928dbbe505e"
 };
 
 // Inisialisasi Firebase
@@ -45,6 +46,11 @@ class DocApp {
         this.btnAddGroup = document.getElementById('btn-add-group');
         this.searchInput = document.getElementById('search-input');
         
+        // Mobile Sidebar Elements
+        this.sidebar = document.getElementById('sidebar');
+        this.mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        this.sidebarOverlay = document.getElementById('sidebar-overlay');
+
         // Formatting Buttons
         this.btnBold = document.getElementById('btn-bold');
         this.btnItalic = document.getElementById('btn-italic');
@@ -81,7 +87,7 @@ class DocApp {
     async init() {
         console.log("Menghubungkan ke Cloud Firestore...");
         this.data = await this.loadData();
-        
+
         if (this.data) {
             this.renderNav();
             this.renderPage(this.currentPageId);
@@ -115,20 +121,32 @@ class DocApp {
 
     async saveData(newData = null, showMessage = true) {
         const dataToSave = newData || this.data;
+        
+        // Visual indicator
+        const originalText = this.btnSave.innerHTML;
+        this.btnSave.innerHTML = '<i data-lucide="loader" class="animate-spin" style="width:14px"></i> Menyimpan...';
+        this.btnSave.disabled = true;
+
         try {
+            console.log("Mencoba menyimpan data ke Firestore...");
             await db.collection('documentation').doc(DOC_ID).set(dataToSave);
+            console.log("Berhasil disimpan ke Firestore!");
+
             if (showMessage) {
                 alert('Perubahan berhasil disimpan ke Cloud!');
-                this.history = []; // Clear history after save to prevent confusion
+                this.history = []; 
                 this.redoStack = [];
             }
-            
-            // Backup ke localStorage juga sebagai cadangan
+
             localStorage.setItem('turbo_st_docs', JSON.stringify(dataToSave));
         } catch (error) {
-            console.error("Error saving to Firestore:", error);
-            alert('Gagal menyimpan ke Cloud! Perubahan hanya disimpan di browser ini.');
+            console.error("Gagal menyimpan ke Firestore:", error);
+            alert('Gagal menyimpan ke Cloud! Periksa koneksi atau izin database Anda.');
             localStorage.setItem('turbo_st_docs', JSON.stringify(dataToSave));
+        } finally {
+            this.btnSave.innerHTML = originalText;
+            this.btnSave.disabled = false;
+            lucide.createIcons();
         }
     }
 
@@ -156,7 +174,7 @@ class DocApp {
                 </div>
                 <ul class="nav-menu"></ul>
             `;
-            
+
             if (this.isAdminMode) {
                 const iconWrapper = group.querySelector('.group-icon-wrapper');
                 iconWrapper.addEventListener('click', (e) => {
@@ -184,7 +202,7 @@ class DocApp {
                 if (this.isAdminMode && (e.target.tagName === 'SPAN' || e.target.closest('.group-icon-wrapper') || e.target.closest('.btn-delete-group'))) {
                     return;
                 }
-                
+
                 const isCollapsed = group.classList.contains('collapsed');
                 if (isCollapsed) {
                     // Tutup grup lain (Accordion)
@@ -209,7 +227,7 @@ class DocApp {
                 const li = document.createElement('li');
                 li.className = 'nav-item';
                 const isHome = page.id === 'beranda';
-                
+
                 const temp = document.createElement('div');
                 temp.innerHTML = page.content;
                 const headings = temp.querySelectorAll('h2');
@@ -275,7 +293,7 @@ class DocApp {
                         subMenu.classList.toggle('collapsed');
                         btnToggle.classList.toggle('open');
                     });
-                    
+
                     li.appendChild(subMenu);
                 }
                 list.appendChild(li);
@@ -302,7 +320,7 @@ class DocApp {
         this.pageTitle.innerText = page.title;
         this.pageDesc.innerText = page.description;
         this.pageContent.innerHTML = page.content;
-        
+
         this.breadcrumbApp.innerText = currentApp.name;
         this.breadcrumbApp.onclick = (e) => {
             e.preventDefault();
@@ -333,7 +351,11 @@ class DocApp {
             this.takeSnapshot();
         }
         this.renderPage(id);
-        
+
+        if (window.innerWidth <= 768) {
+            this.closeSidebar();
+        }
+
         if (!hash) {
             window.scrollTo({
                 top: 0,
@@ -408,6 +430,14 @@ class DocApp {
                 this.redo();
             }
         });
+
+        // Mobile Sidebar Toggle
+        if (this.mobileMenuBtn) {
+            this.mobileMenuBtn.addEventListener('click', () => this.toggleSidebar());
+        }
+        if (this.sidebarOverlay) {
+            this.sidebarOverlay.addEventListener('click', () => this.closeSidebar());
+        }
 
         // Formatting event listeners
         this.btnBold.addEventListener('click', (e) => {
@@ -511,17 +541,27 @@ class DocApp {
         }
     }
 
+    toggleSidebar() {
+        this.sidebar.classList.toggle('open');
+        this.sidebarOverlay.classList.toggle('show');
+    }
+
+    closeSidebar() {
+        this.sidebar.classList.remove('open');
+        this.sidebarOverlay.classList.remove('show');
+    }
+
     async deleteGroup(id, name) {
         if (confirm(`Apakah Anda yakin ingin menghapus seluruh grup "${name}" beserta isinya?`)) {
             this.takeSnapshot();
             this.data.apps = this.data.apps.filter(app => app.id !== id);
             await this.saveData();
-            
+
             let pageExists = false;
             this.data.apps.forEach(app => {
                 if (app.pages.find(p => p.id === this.currentPageId)) pageExists = true;
             });
-            
+
             if (!pageExists && this.data.apps.length > 0) {
                 this.navigateTo(this.data.apps[0].pages[0].id);
             } else {
@@ -593,7 +633,7 @@ class DocApp {
         this.takeSnapshot();
         const activeApp = this.data.apps[0]; // Tambahkan ke aplikasi pertama secara default atau yang sedang dibuka
         activeApp.pages.push(newPage);
-        
+
         this.saveData();
         this.hideModal();
         this.renderNav();
@@ -604,15 +644,15 @@ class DocApp {
         this.isAdminMode = !this.isAdminMode;
         document.body.classList.toggle('admin-mode', this.isAdminMode);
         this.cmsActions.style.display = this.isAdminMode ? 'block' : 'none';
-        this.btnToggleCMS.innerHTML = this.isAdminMode ? 
-            '<i data-lucide="eye" style="width: 16px;"></i> Selesai Edit' : 
+        this.btnToggleCMS.innerHTML = this.isAdminMode ?
+            '<i data-lucide="eye" style="width: 16px;"></i> Selesai Edit' :
             '<i data-lucide="edit-3" style="width: 16px;"></i> Mode Admin';
-        
+
         const isEditable = this.isAdminMode ? 'true' : 'false';
         this.pageTitle.contentEditable = isEditable;
         this.pageDesc.contentEditable = isEditable;
         this.pageContent.contentEditable = isEditable;
-        
+
         const logoText = document.querySelector('.logo-text');
         if (logoText) logoText.contentEditable = isEditable;
 
@@ -623,20 +663,20 @@ class DocApp {
 
     insertAtCursor(element) {
         this.takeSnapshot();
-        
+
         if (this.selectedRange) {
             const range = this.selectedRange;
             range.deleteContents();
             range.insertNode(element);
-            
+
             const nextP = document.createElement('p');
             nextP.innerHTML = '<br>';
             element.after(nextP);
-            
+
             const newRange = document.createRange();
             newRange.setStart(nextP, 0);
             newRange.collapse(true);
-            
+
             this.selectedRange = newRange;
             const sel = window.getSelection();
             sel.removeAllRanges();
@@ -731,7 +771,7 @@ class DocApp {
     renderPagination() {
         const allPages = this.getAllPages();
         const idx = allPages.findIndex(p => p.id === this.currentPageId);
-        
+
         if (idx > 0) {
             this.navPrev.style.visibility = 'visible';
             document.getElementById('nav-prev-title').innerText = allPages[idx - 1].title;
@@ -790,7 +830,7 @@ class DocApp {
             const headings = temp.querySelectorAll('h2');
             if (headings.length > 0) {
                 this.linkHashGroup.style.display = 'block';
-                this.linkTargetHash.innerHTML = '<option value="">-- Seluruh Halaman --</option>' + 
+                this.linkTargetHash.innerHTML = '<option value="">-- Seluruh Halaman --</option>' +
                     Array.from(headings).map((h, i) => `<option value="heading-${i}">${h.innerText}</option>`).join('');
                 if (currentHash) this.linkTargetHash.value = currentHash;
             } else {
@@ -851,8 +891,8 @@ class DocApp {
         this.navMenu.innerHTML = '';
         const results = [];
         this.data.apps.forEach(app => {
-            const matchedPages = app.pages.filter(p => 
-                p.title.toLowerCase().includes(query) || 
+            const matchedPages = app.pages.filter(p =>
+                p.title.toLowerCase().includes(query) ||
                 p.description.toLowerCase().includes(query) ||
                 p.content.toLowerCase().includes(query)
             );
@@ -893,10 +933,10 @@ class DocApp {
     }
     exportData() {
         const dataStr = JSON.stringify(this.data, null, 2);
-        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-        
-        const exportFileDefaultName = `turbo_st_backup_${new Date().toISOString().slice(0,10)}.json`;
-        
+        const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+
+        const exportFileDefaultName = `turbo_st_backup_${new Date().toISOString().slice(0, 10)}.json`;
+
         const linkElement = document.createElement('a');
         linkElement.setAttribute('href', dataUri);
         linkElement.setAttribute('download', exportFileDefaultName);
@@ -972,7 +1012,7 @@ class DocApp {
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = this.pageContent.innerHTML;
                 tempDiv.querySelectorAll('.btn-delete').forEach(el => el.remove());
-                
+
                 page.title = this.pageTitle.innerText;
                 page.description = this.pageDesc.innerText;
                 page.content = tempDiv.innerHTML;
@@ -982,19 +1022,19 @@ class DocApp {
 
     injectAdminTools() {
         if (!this.isAdminMode) return;
-        
+
         // Target semua elemen blok utama di dalam konten
         const blocks = this.pageContent.querySelectorAll('h2, p, ul, ol, .img-container, .callout');
         blocks.forEach(block => {
             // Jangan tambahkan jika sudah ada atau jika berada di dalam blok lain (misal P di dalam callout)
             if (block.closest('.img-container, .callout') && block.className !== 'img-container' && block.className !== 'callout') return;
-            
+
             if (!block.querySelector(':scope > .btn-delete')) {
                 const btn = document.createElement('button');
                 btn.className = 'btn-delete';
                 btn.innerHTML = '<i data-lucide="trash-2" style="width: 14px;"></i>';
                 btn.title = 'Hapus Blok';
-                
+
                 // Pastikan block punya position relative untuk menampung button
                 if (getComputedStyle(block).position === 'static') {
                     block.style.position = 'relative';
