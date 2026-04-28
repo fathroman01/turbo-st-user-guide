@@ -164,7 +164,6 @@ class DocApp {
             const group = document.createElement('div');
             group.className = 'nav-group';
             if (this.isAdminMode) {
-                group.draggable = true;
                 group.addEventListener('dragstart', (e) => this.handleDragStart(e, null, app.id, 'group'));
                 group.addEventListener('dragover', (e) => this.handleDragOver(e));
                 group.addEventListener('drop', (e) => this.handleDrop(e, null, app.id, 'group'));
@@ -174,6 +173,11 @@ class DocApp {
             group.innerHTML = `
                 <div class="nav-group-title" data-group-id="${app.id}">
                     <div class="group-title-left" style="display: flex; align-items: center; gap: 0.75rem;">
+                        ${this.isAdminMode ? `
+                            <span class="group-drag-handle" title="Geser urutan grup" style="cursor: grab; color: var(--text-muted); display: inline-flex; align-items: center;">
+                                <i data-lucide="grip-vertical" style="width: 16px;"></i>
+                            </span>
+                        ` : ''}
                         <span class="group-icon-wrapper ${this.isAdminMode ? 'editable-icon' : ''}" title="${this.isAdminMode ? 'Klik untuk ganti ikon' : ''}">
                             <i data-lucide="${app.icon || 'layout'}" style="width: 18px;"></i>
                         </span>
@@ -232,10 +236,19 @@ class DocApp {
             });
 
             if (this.isAdminMode) {
-                group.querySelector('.nav-group-title span').addEventListener('blur', (e) => {
-                    app.name = e.target.innerText;
-                    this.saveData();
-                });
+                const dragHandle = group.querySelector('.group-drag-handle');
+                if (dragHandle) {
+                    dragHandle.addEventListener('mouseenter', () => group.draggable = true);
+                    dragHandle.addEventListener('mouseleave', () => group.draggable = false);
+                }
+                const titleSpan = group.querySelector('.nav-group-title span[contenteditable="true"]') || group.querySelector('.nav-group-title span:last-child');
+                if (titleSpan) {
+                    titleSpan.addEventListener('blur', (e) => {
+                        group.draggable = false;
+                        app.name = e.target.innerText;
+                        this.saveData();
+                    });
+                }
             }
 
             const list = group.querySelector('ul');
@@ -243,7 +256,6 @@ class DocApp {
                 const li = document.createElement('li');
                 li.className = 'nav-item';
                 if (this.isAdminMode) {
-                    li.draggable = true;
                     li.addEventListener('dragstart', (e) => this.handleDragStart(e, page.id, app.id, 'page'));
                     li.addEventListener('dragover', (e) => this.handleDragOver(e));
                     li.addEventListener('drop', (e) => this.handleDrop(e, page.id, app.id, 'page'));
@@ -259,7 +271,12 @@ class DocApp {
 
                 li.innerHTML = `
                     <div class="nav-item-header">
-                        <a href="#" class="nav-link ${page.id === this.currentPageId ? 'active' : ''}" data-id="${page.id}">
+                        <a href="#" class="nav-link ${page.id === this.currentPageId ? 'active' : ''}" data-id="${page.id}" style="display: flex; align-items: center;">
+                            ${this.isAdminMode && !isHome ? `
+                                <span class="page-drag-handle" title="Geser urutan bab" style="cursor: grab; color: var(--text-muted); margin-right: 6px; display: inline-flex; align-items: center;">
+                                    <i data-lucide="grip-vertical" style="width: 14px;"></i>
+                                </span>
+                            ` : ''}
                             <span class="nav-text" ${this.isAdminMode ? 'contenteditable="true"' : ''}>${page.title}</span>
                             ${this.isAdminMode && !isHome ? `
                                 <button class="btn-delete-page" data-delete="${page.id}" title="Hapus Bab">
@@ -276,11 +293,19 @@ class DocApp {
                 `;
 
                 if (this.isAdminMode) {
+                    const dragHandle = li.querySelector('.page-drag-handle');
+                    if (dragHandle) {
+                        dragHandle.addEventListener('mouseenter', () => li.draggable = true);
+                        dragHandle.addEventListener('mouseleave', () => li.draggable = false);
+                    }
                     const textSpan = li.querySelector('.nav-text');
-                    textSpan.addEventListener('blur', () => {
-                        page.title = textSpan.innerText;
-                        this.saveData();
-                    });
+                    if (textSpan) {
+                        textSpan.addEventListener('blur', () => {
+                            li.draggable = false;
+                            page.title = textSpan.innerText;
+                            this.saveData();
+                        });
+                    }
                 }
 
                 li.querySelector('.nav-link').addEventListener('click', (e) => {
