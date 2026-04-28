@@ -163,6 +163,14 @@ class DocApp {
         this.data.apps.forEach(app => {
             const group = document.createElement('div');
             group.className = 'nav-group';
+            if (this.isAdminMode) {
+                group.draggable = true;
+                group.addEventListener('dragstart', (e) => this.handleDragStart(e, null, app.id, 'group'));
+                group.addEventListener('dragover', (e) => this.handleDragOver(e));
+                group.addEventListener('drop', (e) => this.handleDrop(e, null, app.id, 'group'));
+                group.addEventListener('dragenter', (e) => this.handleDragEnter(e));
+                group.addEventListener('dragleave', (e) => this.handleDragLeave(e));
+            }
             group.innerHTML = `
                 <div class="nav-group-title" data-group-id="${app.id}">
                     <div class="group-title-left" style="display: flex; align-items: center; gap: 0.75rem;">
@@ -234,6 +242,14 @@ class DocApp {
             app.pages.forEach(page => {
                 const li = document.createElement('li');
                 li.className = 'nav-item';
+                if (this.isAdminMode) {
+                    li.draggable = true;
+                    li.addEventListener('dragstart', (e) => this.handleDragStart(e, page.id, app.id, 'page'));
+                    li.addEventListener('dragover', (e) => this.handleDragOver(e));
+                    li.addEventListener('drop', (e) => this.handleDrop(e, page.id, app.id, 'page'));
+                    li.addEventListener('dragenter', (e) => this.handleDragEnter(e));
+                    li.addEventListener('dragleave', (e) => this.handleDragLeave(e));
+                }
                 const isHome = page.id === 'beranda';
 
                 const temp = document.createElement('div');
@@ -309,6 +325,81 @@ class DocApp {
             this.navMenu.appendChild(group);
         });
         lucide.createIcons();
+    }
+
+    handleDragStart(e, pageId, appId, type) {
+        if (e.target.tagName === 'INPUT' || e.target.contentEditable === "true" || e.target.closest('.btn-delete-page') || e.target.closest('.btn-delete-group')) {
+            e.preventDefault();
+            return;
+        }
+        e.stopPropagation();
+        this.draggedItem = { pageId, appId, type };
+        e.dataTransfer.effectAllowed = 'move';
+        setTimeout(() => {
+            if (e.target.classList) e.target.classList.add('dragging');
+        }, 0);
+    }
+
+    handleDragOver(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = 'move';
+    }
+
+    handleDragEnter(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.currentTarget.classList) e.currentTarget.classList.add('drag-over');
+    }
+
+    handleDragLeave(e) {
+        e.stopPropagation();
+        if (e.currentTarget.classList) e.currentTarget.classList.remove('drag-over');
+    }
+
+    handleDrop(e, targetPageId, targetAppId, targetType) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.currentTarget.classList) e.currentTarget.classList.remove('drag-over');
+        
+        if (!this.draggedItem) return;
+
+        const { pageId: sourcePageId, appId: sourceAppId, type: sourceType } = this.draggedItem;
+        this.draggedItem = null;
+
+        document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+
+        if (sourceType === 'page' && targetType === 'page') {
+            if (sourcePageId === targetPageId) return;
+
+            const sourceAppIndex = this.data.apps.findIndex(a => a.id === sourceAppId);
+            const targetAppIndex = this.data.apps.findIndex(a => a.id === targetAppId);
+            
+            const sourceApp = this.data.apps[sourceAppIndex];
+            const targetApp = this.data.apps[targetAppIndex];
+
+            const sourcePageIndex = sourceApp.pages.findIndex(p => p.id === sourcePageId);
+            const targetPageIndex = targetApp.pages.findIndex(p => p.id === targetPageId);
+
+            const [page] = sourceApp.pages.splice(sourcePageIndex, 1);
+            targetApp.pages.splice(targetPageIndex, 0, page);
+
+            this.takeSnapshot();
+            this.saveData();
+            this.renderNav();
+        } else if (sourceType === 'group' && targetType === 'group') {
+            if (sourceAppId === targetAppId) return;
+
+            const sourceAppIndex = this.data.apps.findIndex(a => a.id === sourceAppId);
+            const targetAppIndex = this.data.apps.findIndex(a => a.id === targetAppId);
+
+            const [app] = this.data.apps.splice(sourceAppIndex, 1);
+            this.data.apps.splice(targetAppIndex, 0, app);
+
+            this.takeSnapshot();
+            this.saveData();
+            this.renderNav();
+        }
     }
 
     renderPage(id) {
