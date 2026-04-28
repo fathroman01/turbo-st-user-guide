@@ -1055,6 +1055,7 @@ class DocApp {
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = this.pageContent.innerHTML;
                 tempDiv.querySelectorAll('.btn-delete').forEach(el => el.remove());
+                tempDiv.querySelectorAll('.resize-handle').forEach(el => el.remove());
 
                 page.title = this.pageTitle.innerText;
                 page.description = this.pageDesc.innerText;
@@ -1093,6 +1094,15 @@ class DocApp {
                 };
                 block.appendChild(btn);
             }
+
+            // Tambahkan fitur resize khusus untuk gambar
+            if (block.classList.contains('img-container') && !block.querySelector(':scope > .resize-handle')) {
+                const handle = document.createElement('div');
+                handle.className = 'resize-handle';
+                handle.title = 'Tarik untuk mengubah ukuran';
+                handle.addEventListener('mousedown', (e) => this.initResize(e, block));
+                block.appendChild(handle);
+            }
         });
 
         // Khusus untuk Judul Utama (H1)
@@ -1125,6 +1135,50 @@ class DocApp {
             this.renderPage(this.currentPageId);
             alert('Perubahan dibatalkan. Data telah dikembalikan ke versi terakhir di Cloud.');
         }
+    }
+
+    initResize(e, container) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.isResizing = true;
+        this.resizeTarget = container;
+        this.startX = e.clientX;
+        this.startWidth = container.offsetWidth;
+        container.classList.add('resizing');
+        
+        document.body.style.userSelect = 'none';
+
+        this.onMouseMove = (e) => this.handleResize(e);
+        this.onMouseUp = (e) => this.stopResize(e);
+        
+        document.addEventListener('mousemove', this.onMouseMove);
+        document.addEventListener('mouseup', this.onMouseUp);
+    }
+
+    handleResize(e) {
+        if (!this.isResizing || !this.resizeTarget) return;
+        const dx = e.clientX - this.startX;
+        const newWidth = this.startWidth + dx;
+        
+        const parentWidth = this.resizeTarget.parentElement.offsetWidth;
+        const finalWidth = Math.max(100, Math.min(newWidth, parentWidth));
+        
+        const percentage = (finalWidth / parentWidth) * 100;
+        this.resizeTarget.style.width = `${percentage}%`;
+    }
+
+    stopResize(e) {
+        this.isResizing = false;
+        if (this.resizeTarget) {
+            this.resizeTarget.classList.remove('resizing');
+            this.resizeTarget = null;
+        }
+        document.body.style.userSelect = '';
+        document.removeEventListener('mousemove', this.onMouseMove);
+        document.removeEventListener('mouseup', this.onMouseUp);
+        
+        this.takeSnapshot();
+        this.saveData();
     }
 }
 

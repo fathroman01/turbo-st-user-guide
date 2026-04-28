@@ -612,7 +612,7 @@ body {
 /* Modal */
 .cms-toolbar {
   position: fixed;
-  top: 2rem;
+  top: 4rem;
   left: 50%;
   transform: translateX(-50%);
   background: rgba(255, 255, 255, 0.95);
@@ -1087,23 +1087,43 @@ body {
 
 /* Content Images */
 .prose img {
-  max-width: 100%;
+  width: 100%;
   height: auto;
   border-radius: var(--radius);
-  margin: 1.5rem 0;
+  margin: 0;
   box-shadow: var(--shadow);
   border: 1px solid var(--border);
   cursor: pointer;
-  transition: transform 0.3s ease;
-}
-
-.prose img:hover {
-  transform: scale(1.01);
+  display: block;
 }
 
 .img-container {
   position: relative;
-  margin-bottom: 2rem;
+  margin: 1.5rem 0 2rem;
+  width: 100%;
+  max-width: 100%;
+  display: inline-block;
+  vertical-align: top;
+}
+
+.resize-handle {
+  position: absolute;
+  right: -8px;
+  bottom: -8px;
+  width: 20px;
+  height: 20px;
+  background: var(--primary);
+  cursor: nwse-resize;
+  display: none;
+  z-index: 10;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.admin-mode .img-container:hover .resize-handle,
+.admin-mode .img-container.resizing .resize-handle {
+  display: block;
 }
 
 .img-placeholder {
