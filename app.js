@@ -33,6 +33,7 @@ class DocApp {
         this.btnToggleCMS = document.getElementById('toggle-cms');
         this.cmsActions = document.getElementById('cms-actions');
         this.btnSave = document.getElementById('btn-save-cms');
+        this.btnCancelCMS = document.getElementById('btn-cancel-cms');
         this.btnLogoutCMS = document.getElementById('btn-logout-cms');
         this.btnAddH2 = document.getElementById('btn-add-h2');
         this.btnAddText = document.getElementById('btn-add-text');
@@ -42,6 +43,8 @@ class DocApp {
         this.btnAddImage = document.getElementById('btn-add-image');
         this.btnAddSuccess = document.getElementById('btn-add-success');
         this.btnAddCallout = document.getElementById('btn-add-callout');
+        this.btnAddGreeting = document.getElementById('btn-add-greeting');
+        this.btnAddGreetingBakoel = document.getElementById('btn-add-greeting-bakoel');
         this.btnAddPage = document.getElementById('btn-add-page');
         this.btnAddGroup = document.getElementById('btn-add-group');
         this.searchInput = document.getElementById('search-input');
@@ -398,6 +401,10 @@ class DocApp {
             alert("Perubahan disimpan!");
         });
 
+        if (this.btnCancelCMS) {
+            this.btnCancelCMS.addEventListener('click', () => this.cancelEdit());
+        }
+
         if (this.btnLogoutCMS) {
             this.btnLogoutCMS.addEventListener('click', () => {
                 sessionStorage.removeItem('isAdminLoggedIn');
@@ -420,6 +427,12 @@ class DocApp {
         this.btnAddImage.addEventListener('click', () => this.insertImagePlaceholder());
         this.btnAddSuccess.addEventListener('click', () => this.insertSuccessBlock());
         this.btnAddCallout.addEventListener('click', () => this.insertCalloutBlock());
+        if (this.btnAddGreeting) {
+            this.btnAddGreeting.addEventListener('click', () => this.insertGreetingBlock());
+        }
+        if (this.btnAddGreetingBakoel) {
+            this.btnAddGreetingBakoel.addEventListener('click', () => this.insertGreetingBakoelBlock());
+        }
         this.btnAddPage.addEventListener('click', () => this.showModal());
         this.btnAddGroup.addEventListener('click', () => this.addGroup());
         this.btnCancelModal.addEventListener('click', () => this.hideModal());
@@ -725,7 +738,7 @@ class DocApp {
         const div = document.createElement('div');
         div.className = 'callout success';
         div.innerHTML = `
-            <div class="callout-title">✅ Hasil / Selesai</div>
+            <div class="callout-title">✅ Selesai</div>
             <p>Jelaskan hasil akhir dari langkah-langkah di atas di sini...</p>
         `;
         this.insertAtCursor(div);
@@ -737,12 +750,32 @@ class DocApp {
         const div = document.createElement('div');
         div.className = 'callout';
         div.innerHTML = `
-            <div class="callout-title">⚠️ Catatan Penting</div>
-            <p>Tulis informasi atau peringatan penting di sini...</p>
+            <div class="callout-title">⚠️ Catatan</div>
+            <p>Tulis informasi atau catatan di sini...</p>
         `;
         this.insertAtCursor(div);
         this.injectAdminTools();
         lucide.createIcons();
+    }
+
+    insertGreetingBlock() {
+        const p = document.createElement('p');
+        p.style.fontStyle = 'italic';
+        p.style.color = 'var(--text-main)';
+        p.style.marginTop = '1.5rem';
+        p.style.textAlign = 'center';
+        p.innerText = 'Selamat mencoba, Sedolor Turbo ST';
+        this.insertAtCursor(p);
+    }
+
+    insertGreetingBakoelBlock() {
+        const p = document.createElement('p');
+        p.style.fontStyle = 'italic';
+        p.style.color = 'var(--text-main)';
+        p.style.marginTop = '1.5rem';
+        p.style.textAlign = 'center';
+        p.innerText = 'Selamat mencoba, Sedolor Bakoel ST';
+        this.insertAtCursor(p);
     }
 
     insertImagePlaceholder() {
@@ -1088,8 +1121,9 @@ class DocApp {
             this.data = await this.loadData();
             this.history = [];
             this.redoStack = [];
-            this.toggleAdminMode();
-            alert('Perubahan dibatalkan.');
+            this.renderNav();
+            this.renderPage(this.currentPageId);
+            alert('Perubahan dibatalkan. Data telah dikembalikan ke versi terakhir di Cloud.');
         }
     }
 }
