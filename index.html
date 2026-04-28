@@ -41,22 +41,36 @@
 
         <!-- Main Content -->
         <main class="main-wrapper">
-            <div style="position: sticky; top: 0; z-index: 100; background: white; border-bottom: 1px solid var(--border);">
-                <div style="text-align: center; padding: 0.6rem 0 0rem; font-weight: 700; color: #c59d3f; font-size: 0.95rem; letter-spacing: 0.02em;">
-                    Atas Berkat Rochmat Alloh Yang Maha Kuasa
+            <header class="top-bar" style="position: sticky; top: 0; z-index: 100; background: white; padding-bottom: 0.5rem; padding-top: 1.25rem; border-bottom: 1px solid var(--border);">
+                <div style="max-width: 1200px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 0;">
+                
+                <!-- Baris Atas: Tulisan & Pencarian -->
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                    <!-- Kiri: Menu & Tulisan -->
+                    <div style="display: flex; align-items: center; gap: 1rem; flex: 1; min-width: 250px;">
+                        <button class="btn-icon mobile-menu-btn" id="mobile-menu-btn" title="Menu">
+                            <i data-lucide="menu" style="width: 20px;"></i>
+                        </button>
+                        <div style="font-weight: 700; color: #c59d3f; font-size: 0.95rem; letter-spacing: 0.02em; text-align: left;">
+                            Atas Berkat Rochmat Alloh Yang Maha Kuasa
+                        </div>
+                    </div>
+                    <!-- Kanan: Pencarian -->
+                    <div style="display: flex; justify-content: flex-end; flex: 1; min-width: 240px;">
+                        <div class="search-box" style="margin: 0; width: 100%; max-width: 240px;">
+                            <i data-lucide="search" style="width: 18px; color: var(--text-muted);"></i>
+                            <input type="text" class="search-input" placeholder="Cari panduan..." id="search-input">
+                        </div>
+                    </div>
                 </div>
-                <header class="top-bar" style="border-bottom: none;">
-                <button class="btn-icon mobile-menu-btn" id="mobile-menu-btn" title="Menu">
-                    <i data-lucide="menu" style="width: 20px;"></i>
-                </button>
-                <div class="search-box">
-                    <i data-lucide="search" style="width: 18px; color: var(--text-muted);"></i>
-                    <input type="text" class="search-input" placeholder="Cari panduan..." id="search-input">
-                </div>
-                <div class="breadcrumb">
+
+                <!-- Baris Bawah: Breadcrumb (Penunjuk Halaman) -->
+                <div class="breadcrumb" style="margin-bottom: 0; margin-top: -0.25rem;">
                     <a href="#" class="breadcrumb-link" id="breadcrumb-app">Dokumentasi</a>
                     <i data-lucide="chevron-right" style="width: 14px; margin: 0 0.5rem; color: var(--text-muted);"></i>
                     <span id="breadcrumb-current">Beranda</span>
+                </div>
+                
                 </div>
                 
                 <div class="cms-controls" id="cms-actions" style="display: none;">
@@ -92,7 +106,6 @@
                     </div>
                 </div>
             </header>
-            </div>
 
             <div class="content-area" id="content-root">
                 <div class="article-body">
