@@ -20,6 +20,11 @@
   box-sizing: border-box;
 }
 
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   color: var(--text-main);
@@ -351,6 +356,7 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-width: 0; /* Prevent grid blowout */
 }
 
 .top-bar {
@@ -1071,7 +1077,7 @@ body {
   }
 
   .top-bar {
-    padding: 1rem;
+    padding: 1rem 0.5rem;
   }
 
   .top-bar-row {
@@ -1091,9 +1097,10 @@ body {
   }
 
   .top-bar-text {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal; /* Let it wrap so it doesn't stretch screen */
+    line-height: 1.3;
+    font-size: 0.85rem;
+    word-wrap: break-word;
   }
 
   .top-bar-search {
@@ -1138,7 +1145,7 @@ body {
   }
 
   .content-area {
-    padding: 1.5rem 1rem;
+    padding: 1.5rem 0.5rem;
   }
 
   .page-title {
