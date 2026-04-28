@@ -795,12 +795,14 @@ class DocApp {
 
     renderTOC() {
         this.tocList.innerHTML = '';
+        const tocContainer = document.querySelector('.toc-container');
         const headings = this.pageContent.querySelectorAll('h2');
         if (headings.length === 0) {
-            this.tocList.innerHTML = '<li class="toc-item"><span class="toc-link">Tidak ada sub-bab</span></li>';
+            if (tocContainer) tocContainer.style.display = 'none';
             return;
         }
 
+        if (tocContainer) tocContainer.style.display = 'block';
         headings.forEach((h, i) => {
             const id = `heading-${i}`;
             h.id = id;
