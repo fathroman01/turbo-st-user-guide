@@ -966,18 +966,18 @@ class DocApp {
             if (file) {
                 const container = target.closest('.img-container') || target;
                 const originalContent = container.innerHTML;
-                container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);"><i data-lucide="loader" class="animate-spin" style="width: 24px; margin-bottom: 8px; display: inline-block;"></i><p>Memproses gambar...</p></div>`;
+                container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);"><i data-lucide="loader" class="animate-spin" style="width: 24px; margin-bottom: 8px; display: inline-block;"></i><p>Mengunggah gambar ke Storage...</p></div>`;
                 lucide.createIcons();
 
                 try {
                     const reader = new FileReader();
                     reader.onload = (event) => {
                         const img = new Image();
-                        img.onload = () => {
+                        img.onload = async () => {
                             const canvas = document.createElement('canvas');
                             let width = img.width;
                             let height = img.height;
-                            const MAX_WIDTH = 800; // Resize image to max 800px width
+                            const MAX_WIDTH = 1200; // Resize image to max 1200px width
                             
                             if (width > MAX_WIDTH) {
                                 height = Math.round((height * MAX_WIDTH) / width);
@@ -989,9 +989,22 @@ class DocApp {
                             const ctx = canvas.getContext('2d');
                             ctx.drawImage(img, 0, 0, width, height);
                             
-                            // Compress to WebP or JPEG, quality 0.7
-                            const dataUrl = canvas.toDataURL('image/webp', 0.7);
-                            this.updateImage(container, dataUrl);
+                            // Compress to WebP or JPEG, quality 0.8
+                            const dataUrl = canvas.toDataURL('image/webp', 0.8);
+                            
+                            // Upload to Firebase Storage
+                            try {
+                                const filename = `images/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9]/g, '_')}.webp`;
+                                const storageRef = storage.ref().child(filename);
+                                const snapshot = await storageRef.putString(dataUrl, 'data_url');
+                                const downloadURL = await snapshot.ref.getDownloadURL();
+                                this.updateImage(container, downloadURL);
+                            } catch (storageError) {
+                                console.error("Gagal mengunggah ke Storage:", storageError);
+                                alert("Gagal mengunggah gambar ke Storage! \n\nPastikan Rules Firebase Storage Anda diatur menjadi: allow read, write: if true; \n\nDetail Error: " + storageError.message);
+                                container.innerHTML = originalContent;
+                                lucide.createIcons();
+                            }
                         };
                         img.onerror = () => {
                             alert("Format gambar tidak didukung atau rusak.");
