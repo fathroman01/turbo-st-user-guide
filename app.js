@@ -150,7 +150,7 @@ class DocApp {
             localStorage.setItem('turbo_st_docs', JSON.stringify(dataToSave));
         } catch (error) {
             console.error("Gagal menyimpan ke Firestore:", error);
-            alert('Gagal menyimpan ke Cloud! Periksa koneksi atau izin database Anda.');
+            alert('Gagal menyimpan ke Cloud! Detail Error: ' + error.message);
             localStorage.setItem('turbo_st_docs', JSON.stringify(dataToSave));
         } finally {
             this.btnSave.innerHTML = originalText;
@@ -1022,6 +1022,7 @@ class DocApp {
         container.innerHTML = `<img src="${url}" alt="Uploaded Image">`;
         this.injectAdminTools();
         lucide.createIcons();
+        this.updateCurrentPageData();
         this.saveData();
     }
 
