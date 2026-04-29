@@ -2,8 +2,8 @@ import { initialData } from './data.js';
 
 // --- KONFIGURASI CLOUDINARY ---
 // Ganti dengan data dari akun Cloudinary Anda
-const CLOUDINARY_CLOUD_NAME = de7amw1ca;
-const CLOUDINARY_UPLOAD_PRESET = turbo_upload;
+const CLOUDINARY_CLOUD_NAME = "de7amw1ca";
+const CLOUDINARY_UPLOAD_PRESET = "turbo_upload";
 
 // --- KONFIGURASI FIREBASE ---
 // Ganti dengan konfigurasi dari Firebase Console Anda!
