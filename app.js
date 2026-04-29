@@ -1,5 +1,10 @@
 import { initialData } from './data.js';
 
+// --- KONFIGURASI CLOUDINARY ---
+// Ganti dengan data dari akun Cloudinary Anda
+const CLOUDINARY_CLOUD_NAME = de7amw1ca;
+const CLOUDINARY_UPLOAD_PRESET = turbo_upload;
+
 // --- KONFIGURASI FIREBASE ---
 // Ganti dengan konfigurasi dari Firebase Console Anda!
 const firebaseConfig = {
@@ -49,7 +54,7 @@ class DocApp {
         this.btnAddPage = document.getElementById('btn-add-page');
         this.btnAddGroup = document.getElementById('btn-add-group');
         this.searchInput = document.getElementById('search-input');
-        
+
         // Mobile Sidebar Elements
         this.sidebar = document.getElementById('sidebar');
         this.mobileMenuBtn = document.getElementById('mobile-menu-btn');
@@ -98,7 +103,7 @@ class DocApp {
             this.setupEventListeners();
             lucide.createIcons();
             console.log("Data berhasil dimuat dari Cloud!");
-            
+
             // Check admin session
             if (sessionStorage.getItem('isAdminLoggedIn') === 'true') {
                 this.enableAdminMode();
@@ -130,7 +135,7 @@ class DocApp {
 
     async saveData(newData = null, showMessage = true) {
         const dataToSave = newData || this.data;
-        
+
         // Visual indicator
         const originalText = this.btnSave.innerHTML;
         this.btnSave.innerHTML = '<i data-lucide="loader" class="animate-spin" style="width:14px"></i> Menyimpan...';
@@ -143,7 +148,7 @@ class DocApp {
 
             if (showMessage) {
                 alert('Perubahan berhasil disimpan ke Cloud!');
-                this.history = []; 
+                this.history = [];
                 this.redoStack = [];
             }
 
@@ -387,7 +392,7 @@ class DocApp {
         e.preventDefault();
         e.stopPropagation();
         if (e.currentTarget.classList) e.currentTarget.classList.remove('drag-over');
-        
+
         if (!this.draggedItem) return;
 
         const { pageId: sourcePageId, appId: sourceAppId, type: sourceType } = this.draggedItem;
@@ -400,7 +405,7 @@ class DocApp {
 
             const sourceAppIndex = this.data.apps.findIndex(a => a.id === sourceAppId);
             const targetAppIndex = this.data.apps.findIndex(a => a.id === targetAppId);
-            
+
             const sourceApp = this.data.apps[sourceAppIndex];
             const targetApp = this.data.apps[targetAppIndex];
 
@@ -978,30 +983,47 @@ class DocApp {
                             let width = img.width;
                             let height = img.height;
                             const MAX_WIDTH = 1200; // Resize image to max 1200px width
-                            
+
                             if (width > MAX_WIDTH) {
                                 height = Math.round((height * MAX_WIDTH) / width);
                                 width = MAX_WIDTH;
                             }
-                            
+
                             canvas.width = width;
                             canvas.height = height;
                             const ctx = canvas.getContext('2d');
                             ctx.drawImage(img, 0, 0, width, height);
-                            
+
                             // Compress to WebP or JPEG, quality 0.8
                             const dataUrl = canvas.toDataURL('image/webp', 0.8);
-                            
-                            // Upload to Firebase Storage
+
+                            // Upload to Cloudinary
                             try {
-                                const filename = `images/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9]/g, '_')}.webp`;
-                                const storageRef = storage.ref().child(filename);
-                                const snapshot = await storageRef.putString(dataUrl, 'data_url');
-                                const downloadURL = await snapshot.ref.getDownloadURL();
-                                this.updateImage(container, downloadURL);
-                            } catch (storageError) {
-                                console.error("Gagal mengunggah ke Storage:", storageError);
-                                alert("Gagal mengunggah gambar ke Storage! \n\nPastikan Rules Firebase Storage Anda diatur menjadi: allow read, write: if true; \n\nDetail Error: " + storageError.message);
+                                if (CLOUDINARY_CLOUD_NAME === "ganti_dengan_cloud_name_anda" || CLOUDINARY_UPLOAD_PRESET === "ganti_dengan_upload_preset_anda") {
+                                    alert("Konfigurasi Cloudinary belum diatur! Silakan buka app.js dan isi CLOUDINARY_CLOUD_NAME serta CLOUDINARY_UPLOAD_PRESET di bagian paling atas.");
+                                    container.innerHTML = originalContent;
+                                    lucide.createIcons();
+                                    return;
+                                }
+
+                                const formData = new FormData();
+                                formData.append('file', dataUrl);
+                                formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+                                const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+                                    method: 'POST',
+                                    body: formData
+                                });
+
+                                const data = await response.json();
+                                if (response.ok) {
+                                    this.updateImage(container, data.secure_url);
+                                } else {
+                                    throw new Error(data.error?.message || "Gagal mengunggah ke Cloudinary");
+                                }
+                            } catch (uploadError) {
+                                console.error("Gagal mengunggah ke Cloudinary:", uploadError);
+                                alert("Gagal mengunggah gambar ke Cloudinary! \n\nDetail Error: " + uploadError.message);
                                 container.innerHTML = originalContent;
                                 lucide.createIcons();
                             }
@@ -1320,12 +1342,12 @@ class DocApp {
         this.startX = e.clientX;
         this.startWidth = container.offsetWidth;
         container.classList.add('resizing');
-        
+
         document.body.style.userSelect = 'none';
 
         this.onMouseMove = (e) => this.handleResize(e);
         this.onMouseUp = (e) => this.stopResize(e);
-        
+
         document.addEventListener('mousemove', this.onMouseMove);
         document.addEventListener('mouseup', this.onMouseUp);
     }
@@ -1334,10 +1356,10 @@ class DocApp {
         if (!this.isResizing || !this.resizeTarget) return;
         const dx = e.clientX - this.startX;
         const newWidth = this.startWidth + dx;
-        
+
         const parentWidth = this.resizeTarget.parentElement.offsetWidth;
         const finalWidth = Math.max(100, Math.min(newWidth, parentWidth));
-        
+
         const percentage = (finalWidth / parentWidth) * 100;
         this.resizeTarget.style.width = `${percentage}%`;
     }
@@ -1351,7 +1373,7 @@ class DocApp {
         document.body.style.userSelect = '';
         document.removeEventListener('mousemove', this.onMouseMove);
         document.removeEventListener('mouseup', this.onMouseUp);
-        
+
         this.takeSnapshot();
         this.saveData();
     }
