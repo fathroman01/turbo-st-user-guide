@@ -966,18 +966,49 @@ class DocApp {
             if (file) {
                 const container = target.closest('.img-container') || target;
                 const originalContent = container.innerHTML;
-                container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);"><i data-lucide="loader" class="animate-spin" style="width: 24px; margin-bottom: 8px; display: inline-block;"></i><p>Mengunggah gambar...</p></div>`;
+                container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);"><i data-lucide="loader" class="animate-spin" style="width: 24px; margin-bottom: 8px; display: inline-block;"></i><p>Memproses gambar...</p></div>`;
                 lucide.createIcons();
 
                 try {
-                    const filename = `images/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-                    const storageRef = storage.ref().child(filename);
-                    const snapshot = await storageRef.put(file);
-                    const downloadURL = await snapshot.ref.getDownloadURL();
-                    this.updateImage(container, downloadURL);
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            let width = img.width;
+                            let height = img.height;
+                            const MAX_WIDTH = 800; // Resize image to max 800px width
+                            
+                            if (width > MAX_WIDTH) {
+                                height = Math.round((height * MAX_WIDTH) / width);
+                                width = MAX_WIDTH;
+                            }
+                            
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+                            
+                            // Compress to WebP or JPEG, quality 0.7
+                            const dataUrl = canvas.toDataURL('image/webp', 0.7);
+                            this.updateImage(container, dataUrl);
+                        };
+                        img.onerror = () => {
+                            alert("Format gambar tidak didukung atau rusak.");
+                            container.innerHTML = originalContent;
+                            lucide.createIcons();
+                        };
+                        img.src = event.target.result;
+                    };
+                    reader.onerror = () => {
+                        alert("Gagal membaca file gambar.");
+                        container.innerHTML = originalContent;
+                        lucide.createIcons();
+                    };
+                    reader.readAsDataURL(file);
                 } catch (error) {
-                    console.error("Gagal mengunggah gambar:", error);
-                    alert("Gagal mengunggah gambar! Periksa koneksi atau izin Storage.");
+                    console.error("Gagal memproses gambar:", error);
+                    alert("Gagal memproses gambar! Terjadi kesalahan.");
                     container.innerHTML = originalContent;
                     lucide.createIcons();
                 }
