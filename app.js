@@ -15,6 +15,7 @@ const firebaseConfig = {
 // Inisialisasi Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const storage = firebase.storage();
 const DOC_ID = "turbo_st_documentation_data"; // ID Dokumen tunggal untuk menyimpan seluruh data
 
 class DocApp {
@@ -960,23 +961,34 @@ class DocApp {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = 'image/*';
-        input.onchange = (e) => {
+        input.onchange = async (e) => {
             const file = e.target.files[0];
             if (file) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    const base64 = event.target.result;
-                    this.updateImage(target, base64);
-                };
-                reader.readAsDataURL(file);
+                const container = target.closest('.img-container') || target;
+                const originalContent = container.innerHTML;
+                container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);"><i data-lucide="loader" class="animate-spin" style="width: 24px; margin-bottom: 8px; display: inline-block;"></i><p>Mengunggah gambar...</p></div>`;
+                lucide.createIcons();
+
+                try {
+                    const filename = `images/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+                    const storageRef = storage.ref().child(filename);
+                    const snapshot = await storageRef.put(file);
+                    const downloadURL = await snapshot.ref.getDownloadURL();
+                    this.updateImage(container, downloadURL);
+                } catch (error) {
+                    console.error("Gagal mengunggah gambar:", error);
+                    alert("Gagal mengunggah gambar! Periksa koneksi atau izin Storage.");
+                    container.innerHTML = originalContent;
+                    lucide.createIcons();
+                }
             }
         };
         input.click();
     }
 
-    updateImage(target, base64) {
-        const container = target.closest('.img-container');
-        container.innerHTML = `<img src="${base64}" alt="Uploaded Image">`;
+    updateImage(target, url) {
+        const container = target.closest('.img-container') || target;
+        container.innerHTML = `<img src="${url}" alt="Uploaded Image">`;
         this.injectAdminTools();
         lucide.createIcons();
         this.saveData();
