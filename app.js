@@ -44,7 +44,10 @@ class DocApp {
         this.btnAddH2 = document.getElementById('btn-add-h2');
         this.btnAddText = document.getElementById('btn-add-text');
         this.btnAddList = document.getElementById('btn-add-list');
+        this.btnAddListNew = document.getElementById('btn-add-list-new');
+        this.btnAddSublist = document.getElementById('btn-add-sublist');
         this.btnAddBullets = document.getElementById('btn-add-bullets');
+        this.btnAddSubpoint = document.getElementById('btn-add-subpoint');
         this.btnAddLink = document.getElementById('btn-add-link');
         this.btnAddImage = document.getElementById('btn-add-image');
         this.btnAddSuccess = document.getElementById('btn-add-success');
@@ -89,6 +92,8 @@ class DocApp {
         // History for Undo/Redo
         this.history = [];
         this.redoStack = [];
+        
+        this.hasUnsavedChanges = false;
 
         this.init();
     }
@@ -158,10 +163,24 @@ class DocApp {
             alert('Gagal menyimpan ke Cloud! Detail Error: ' + error.message);
             localStorage.setItem('turbo_st_docs', JSON.stringify(dataToSave));
         } finally {
-            this.btnSave.innerHTML = originalText;
+            this.markAsSaved();
             this.btnSave.disabled = false;
             lucide.createIcons();
         }
+    }
+
+    markAsUnsaved() {
+        if (!this.hasUnsavedChanges && this.isAdminMode) {
+            this.hasUnsavedChanges = true;
+            this.btnSave.innerHTML = 'Simpan Semua <span class="unsaved-indicator"></span>';
+            this.btnSave.classList.add('has-changes');
+        }
+    }
+
+    markAsSaved() {
+        this.hasUnsavedChanges = false;
+        this.btnSave.innerHTML = 'Simpan Semua';
+        this.btnSave.classList.remove('has-changes');
     }
 
     renderNav() {
@@ -187,7 +206,7 @@ class DocApp {
                         <span class="group-icon-wrapper ${this.isAdminMode ? 'editable-icon' : ''}" title="${this.isAdminMode ? 'Klik untuk ganti ikon' : ''}">
                             <i data-lucide="${app.icon || 'layout'}" style="width: 18px;"></i>
                         </span>
-                        <span ${this.isAdminMode ? 'contenteditable="true"' : ''}>${app.name}</span>
+                        <span>${app.name}</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         ${this.isAdminMode ? `
@@ -225,7 +244,7 @@ class DocApp {
             }
 
             group.querySelector('.nav-group-title').addEventListener('click', (e) => {
-                if (this.isAdminMode && (e.target.tagName === 'SPAN' || e.target.closest('.group-icon-wrapper') || e.target.closest('.btn-delete-group'))) {
+                if (this.isAdminMode && (e.target.closest('.group-drag-handle') || e.target.closest('.group-icon-wrapper') || e.target.closest('.btn-delete-group'))) {
                     return;
                 }
 
@@ -259,6 +278,9 @@ class DocApp {
 
             const list = group.querySelector('ul');
             app.pages.forEach(page => {
+                if (!this.isAdminMode && page.hidden) {
+                    return;
+                }
                 const li = document.createElement('li');
                 li.className = 'nav-item';
                 if (this.isAdminMode) {
@@ -277,17 +299,22 @@ class DocApp {
 
                 li.innerHTML = `
                     <div class="nav-item-header">
-                        <a href="#" class="nav-link ${page.id === this.currentPageId ? 'active' : ''}" data-id="${page.id}" style="display: flex; align-items: center;">
+                        <a href="#" class="nav-link ${page.id === this.currentPageId ? 'active' : ''} ${page.hidden ? 'is-hidden' : ''}" data-id="${page.id}" style="display: flex; align-items: center;">
                             ${this.isAdminMode && !isHome ? `
                                 <span class="page-drag-handle" title="Geser urutan bab" style="cursor: grab; color: var(--text-muted); margin-right: 6px; display: inline-flex; align-items: center;">
                                     <i data-lucide="grip-vertical" style="width: 14px;"></i>
                                 </span>
                             ` : ''}
-                            <span class="nav-text" ${this.isAdminMode ? 'contenteditable="true"' : ''}>${page.title}</span>
+                            <span class="nav-text" style="flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${page.title}</span>
                             ${this.isAdminMode && !isHome ? `
-                                <button class="btn-delete-page" data-delete="${page.id}" title="Hapus Bab">
-                                    <i data-lucide="x" style="width: 14px;"></i>
-                                </button>
+                                <div class="page-actions">
+                                    <button class="btn-toggle-hidden" data-toggle-hidden="${page.id}" title="${page.hidden ? 'Publish Bab' : 'Sembunyikan Bab (Draft)'}" style="background: ${page.hidden ? '#fef08a' : 'transparent'}; color: ${page.hidden ? '#ca8a04' : 'var(--text-muted)'};">
+                                        <i data-lucide="${page.hidden ? 'eye-off' : 'eye'}" style="width: 12px;"></i>
+                                    </button>
+                                    <button class="btn-delete-page" data-delete="${page.id}" title="Hapus Bab">
+                                        <i data-lucide="trash-2" style="width: 12px;"></i>
+                                    </button>
+                                </div>
                             ` : ''}
                         </a>
                         ${hasSubMenu ? `
@@ -321,7 +348,17 @@ class DocApp {
                         this.deletePage(page.id, app.id);
                         return;
                     }
-                    if (this.isAdminMode && e.target.classList.contains('nav-text')) return;
+                    const btnToggleHidden = e.target.closest('.btn-toggle-hidden');
+                    if (btnToggleHidden) {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        this.takeSnapshot();
+                        page.hidden = !page.hidden;
+                        this.saveData();
+                        this.renderNav();
+                        return;
+                    }
+                    if (this.isAdminMode && e.target.closest('.page-drag-handle')) return;
                     e.preventDefault();
                     this.navigateTo(page.id);
                 });
@@ -534,6 +571,13 @@ class DocApp {
             });
         }
 
+        const handleInput = () => {
+            if (this.isAdminMode) this.markAsUnsaved();
+        };
+        this.pageTitle.addEventListener('input', handleInput);
+        this.pageDesc.addEventListener('input', handleInput);
+        this.pageContent.addEventListener('input', handleInput);
+
         // Prevent focus loss when clicking toolbar buttons
         this.cmsActions.addEventListener('mousedown', (e) => {
             if (e.target.closest('.btn')) {
@@ -543,8 +587,11 @@ class DocApp {
 
         this.btnAddH2.addEventListener('click', () => this.insertH2Block());
         this.btnAddText.addEventListener('click', () => this.insertTextBlock());
-        this.btnAddList.addEventListener('click', () => this.insertListBlock());
+        this.btnAddList.addEventListener('click', () => this.insertListBlock(false));
+        if (this.btnAddListNew) this.btnAddListNew.addEventListener('click', () => this.insertListBlock(true));
+        if (this.btnAddSublist) this.btnAddSublist.addEventListener('click', () => this.insertSublistBlock());
         this.btnAddBullets.addEventListener('click', () => this.insertBulletBlock());
+        if (this.btnAddSubpoint) this.btnAddSubpoint.addEventListener('click', () => this.insertSubpointBlock());
         this.btnAddLink.addEventListener('click', () => this.showLinkModal());
         this.btnAddImage.addEventListener('click', () => this.insertImagePlaceholder());
         this.btnAddSuccess.addEventListener('click', () => this.insertSuccessBlock());
@@ -591,14 +638,17 @@ class DocApp {
         this.btnBold.addEventListener('click', (e) => {
             e.preventDefault();
             document.execCommand('bold', false, null);
+            this.markAsUnsaved();
         });
         this.btnItalic.addEventListener('click', (e) => {
             e.preventDefault();
             document.execCommand('italic', false, null);
+            this.markAsUnsaved();
         });
         this.btnNormal.addEventListener('click', (e) => {
             e.preventDefault();
             document.execCommand('removeFormat', false, null);
+            this.markAsUnsaved();
         });
 
         this.btnCancelLink.addEventListener('click', () => this.hideLinkModal());
@@ -648,6 +698,7 @@ class DocApp {
                 if (block && confirm('Hapus bagian ini?')) {
                     block.remove();
                     this.renderTOC();
+                    this.markAsUnsaved();
                 }
             }
         });
@@ -665,6 +716,7 @@ class DocApp {
             e.preventDefault();
             const text = (e.originalEvent || e).clipboardData.getData('text/plain');
             document.execCommand('insertText', false, text);
+            this.markAsUnsaved();
         };
 
         this.pageTitle.addEventListener('paste', pasteHandler);
@@ -685,6 +737,32 @@ class DocApp {
             const range = sel.getRangeAt(0);
             if (this.pageContent.contains(range.commonAncestorContainer)) {
                 this.selectedRange = range;
+                
+                if (this.isAdminMode) {
+                    let node = range.commonAncestorContainer;
+                    if (node.nodeType === 3) node = node.parentNode;
+                    
+                    if (node && node.tagName === 'P') {
+                        const text = node.innerText.trim();
+                        const placeholders = [
+                            'Tulis konten bab baru di sini...',
+                            'Mulai tulis panduan Anda di sini...',
+                            'Tulis paragraf baru di sini...',
+                            'Jelaskan hasil akhir dari langkah-langkah di atas di sini...',
+                            'Tulis informasi atau catatan di sini...'
+                        ];
+                        
+                        if (placeholders.includes(text)) {
+                            node.innerHTML = '<br>';
+                            const newRange = document.createRange();
+                            newRange.setStart(node, 0);
+                            newRange.collapse(true);
+                            sel.removeAllRanges();
+                            sel.addRange(newRange);
+                            this.selectedRange = newRange;
+                        }
+                    }
+                }
             }
         }
     }
@@ -737,8 +815,8 @@ class DocApp {
                 ]
             };
             this.data.apps.push(newApp);
-            this.renderNav();
             this.saveData();
+            this.renderNav();
         }
     }
 
@@ -775,7 +853,8 @@ class DocApp {
             title: title,
             icon: icon,
             description: 'Panduan mengenai ' + title,
-            content: '<p>Tulis konten bab baru di sini...</p>'
+            content: '<p>Tulis konten bab baru di sini...</p>',
+            hidden: true // Draft by default
         };
 
         this.takeSnapshot();
@@ -829,6 +908,7 @@ class DocApp {
         } else {
             this.pageContent.appendChild(element);
         }
+        this.markAsUnsaved();
     }
 
     insertH2Block() {
@@ -844,10 +924,68 @@ class DocApp {
         this.insertAtCursor(p);
     }
 
-    insertListBlock() {
+    insertListBlock(isNew = false) {
         const ol = document.createElement('ol');
-        ol.innerHTML = '<li>Langkah pertama</li><li>Langkah kedua</li>';
+        let startVal = 1;
+
+        if (!isNew) {
+            let prevOl = null;
+            if (this.selectedRange) {
+                let node = this.selectedRange.startContainer;
+                if (node.nodeType === 3) node = node.parentNode;
+                
+                while(node && node.parentElement !== this.pageContent && node !== this.pageContent) {
+                    node = node.parentElement;
+                }
+                
+                if (node && node !== this.pageContent) {
+                    let prev = node.previousElementSibling;
+                    while(prev) {
+                        if (prev.tagName === 'OL' && !prev.classList.contains('sub-list')) {
+                            prevOl = prev;
+                            break;
+                        }
+                        prev = prev.previousElementSibling;
+                    }
+                }
+            }
+            
+            if (!prevOl) {
+                const ols = Array.from(this.pageContent.querySelectorAll('ol:not(.sub-list)'));
+                if (ols.length > 0) {
+                    prevOl = ols[ols.length - 1];
+                }
+            }
+
+            if (prevOl) {
+                const currentStart = parseInt(prevOl.getAttribute('start') || 1);
+                const count = prevOl.querySelectorAll(':scope > li').length;
+                startVal = currentStart + count;
+            }
+        }
+
+        if (startVal > 1) {
+            ol.setAttribute('start', startVal);
+            ol.innerHTML = '<li>Langkah selanjutnya...</li>';
+        } else {
+            ol.innerHTML = '<li>Langkah pertama</li><li>Langkah kedua</li>';
+        }
+
         this.insertAtCursor(ol);
+    }
+
+    insertSublistBlock() {
+        const ol = document.createElement('ol');
+        ol.className = 'sub-list';
+        ol.innerHTML = '<li>Sub langkah pertama</li><li>Sub langkah kedua</li>';
+        this.insertAtCursor(ol);
+    }
+
+    insertSubpointBlock() {
+        const ul = document.createElement('ul');
+        ul.className = 'sub-list';
+        ul.innerHTML = '<li>Sub point pertama</li><li>Sub point kedua</li>';
+        this.insertAtCursor(ul);
     }
 
     insertBulletBlock() {
@@ -954,10 +1092,11 @@ class DocApp {
         }
     }
 
-    getAllPages() {
+    getAllPages(includeHidden = this.isAdminMode) {
         let pages = [];
         this.data.apps.forEach(app => {
-            pages = [...pages, ...app.pages];
+            const visiblePages = includeHidden ? app.pages : app.pages.filter(p => !p.hidden);
+            pages = [...pages, ...visiblePages];
         });
         return pages;
     }
@@ -1059,6 +1198,7 @@ class DocApp {
         lucide.createIcons();
         this.updateCurrentPageData();
         this.saveData();
+        this.markAsUnsaved();
     }
 
     updateLinkModalHashes(currentHash = null) {
@@ -1106,6 +1246,7 @@ class DocApp {
             this.hideLinkModal();
             lucide.createIcons();
         }
+        this.markAsUnsaved();
     }
 
     removeInternalLink() {
@@ -1113,6 +1254,7 @@ class DocApp {
             const text = this.editingLink.innerText;
             this.editingLink.replaceWith(text);
             this.hideLinkModal();
+            this.markAsUnsaved();
         }
     }
 
@@ -1198,6 +1340,7 @@ class DocApp {
                         if (confirm('Apakah Anda yakin ingin menimpa data yang ada dengan file ini?')) {
                             this.data = importedData;
                             await this.saveData();
+                            this.markAsSaved();
                             this.renderNav();
                             this.renderPage(this.data.apps[0].pages[0].id);
                             alert('Data berhasil diimpor!');
@@ -1213,6 +1356,8 @@ class DocApp {
     }
 
     takeSnapshot() {
+        if (this.isAdminMode) this.markAsUnsaved();
+        
         // Simpan snapshot data saat ini ke dalam history
         const snapshot = JSON.parse(JSON.stringify(this.data));
         if (this.history.length > 0) {
@@ -1230,6 +1375,7 @@ class DocApp {
             this.data = this.history.pop();
             this.renderNav();
             this.renderPage(this.currentPageId);
+            this.markAsUnsaved();
             console.log("Undo berhasil");
         }
     }
@@ -1240,6 +1386,7 @@ class DocApp {
             this.data = this.redoStack.pop();
             this.renderNav();
             this.renderPage(this.currentPageId);
+            this.markAsUnsaved();
             console.log("Redo berhasil");
         }
     }
@@ -1287,6 +1434,7 @@ class DocApp {
                         this.takeSnapshot();
                         block.remove();
                         this.renderTOC();
+                        this.markAsUnsaved();
                     }
                 };
                 block.appendChild(btn);
@@ -1313,6 +1461,7 @@ class DocApp {
                 if (confirm('Hapus judul ini?')) {
                     this.takeSnapshot();
                     this.pageTitle.innerText = '';
+                    this.markAsUnsaved();
                 }
             };
             this.pageTitle.style.position = 'relative';
@@ -1328,9 +1477,10 @@ class DocApp {
             this.data = await this.loadData();
             this.history = [];
             this.redoStack = [];
+            this.markAsSaved();
             this.renderNav();
             this.renderPage(this.currentPageId);
-            alert('Perubahan dibatalkan. Data telah dikembalikan ke versi terakhir di Cloud.');
+            console.log("Perubahan dibatalkan. Data telah dikembalikan ke versi terakhir di Cloud.");
         }
     }
 

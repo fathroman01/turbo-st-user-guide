@@ -228,22 +228,35 @@ body {
   position: relative;
 }
 
-.btn-delete-page {
-  position: absolute;
-  right: 0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 24px;
-  height: 24px;
-  display: none;
+.page-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  margin-left: auto;
+}
+
+.nav-link:hover .page-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.btn-delete-page, .btn-toggle-hidden {
+  width: 20px;
+  height: 20px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  background: #fee2e2;
-  color: #ef4444;
   border: none;
-  border-radius: 6px;
+  border-radius: 4px;
   cursor: pointer;
-  z-index: 10;
+  transition: all 0.2s;
+}
+
+.btn-delete-page {
+  background: transparent;
+  color: #ef4444;
 }
 
 .btn-delete-page:hover {
@@ -251,9 +264,20 @@ body {
   color: white;
 }
 
-.nav-link:hover .btn-delete-page {
-  display: flex;
+.btn-toggle-hidden {
+  background: transparent;
+  color: var(--text-muted);
 }
+
+.btn-toggle-hidden:hover {
+  background: var(--text-muted);
+  color: white;
+}
+
+.nav-link.is-hidden {
+  opacity: 0.6;
+}
+
 
 .nav-link:hover {
   background: var(--primary-light);
@@ -895,6 +919,27 @@ body {
   transform: translateY(-2px);
 }
 
+.unsaved-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: #fef08a;
+  border-radius: 50%;
+  margin-left: 8px;
+  box-shadow: 0 0 6px rgba(253, 224, 71, 0.8);
+}
+
+.btn-save-cms.has-changes,
+.btn-primary.has-changes {
+  animation: pulse-soft 2s infinite;
+}
+
+@keyframes pulse-soft {
+  0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(37, 99, 235, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+}
+
 /* Content Blocks */
 .prose .block-action {
   display: none;
@@ -926,6 +971,22 @@ body {
 .prose ul {
   margin-bottom: 0.75rem;
   padding-left: 2rem;
+}
+
+.prose ol.sub-list,
+.prose ul.sub-list {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+  padding-left: 2.5rem;
+  margin-left: 1rem;
+}
+
+.prose ol.sub-list {
+  list-style-type: lower-alpha;
+}
+
+.prose ul.sub-list {
+  list-style-type: circle;
 }
 
 .prose li {

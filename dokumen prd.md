@@ -50,7 +50,7 @@ Setiap halaman memiliki struktur:
 - Deskripsi singkat
 - Langkah-langkah (numbered list)
 - Catatan penting (callout box)
-- (Opsional) gambar/screenshot
+- Gambar/screenshot
 
 ---
 
@@ -86,51 +86,6 @@ DESAIN UI/UX:
 ---
 
 DATA AWAL (PRELOAD CONTENT):
-
-Beranda:
-"Panduan Aplikasi Turbo ST. Silakan pilih menu di samping untuk mulai."
-
----
-
-Registrasi Mitra:
-Langkah:
-1. Masuk ke menu Master Utility
-2. Pilih Manajemen Mitra
-3. Klik + Registrasi Mitra
-4. Isi data
-5. Klik Publikasikan
-
----
-
-Informasi Dasar:
-Isi:
-- Nama KCPST / KMPST
-- Tim Pembina
-- Level Harga Mitra
-- Akses Kelola Stok Awal
-- Akses Import Accurate
-
----
-
-Pembuatan Akun:
-- Username
-- Password
-
----
-
-Wilayah:
-- Pilih Kabupaten / Kota
-
----
-
-Import Data:
-Langkah:
-1. Masuk ke menu Management KU → Riwayat Transaksi
-2. Klik Import Transaksi
-3. Download template Excel
-4. Isi data
-5. Upload file
-6. Klik Upload & Sinkronisasi
 
 ---
 
