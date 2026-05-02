@@ -95,6 +95,11 @@ class DocApp {
         
         this.hasUnsavedChanges = false;
 
+        // PWA Install
+        this.deferredPrompt = null;
+        this.installCta = document.getElementById('install-cta');
+        this.btnInstall = document.getElementById('btn-install');
+
         this.init();
     }
 
@@ -817,6 +822,31 @@ class DocApp {
         this.pageContent.addEventListener('mouseup', () => this.saveSelection());
         this.pageContent.addEventListener('keyup', () => this.saveSelection());
         this.pageContent.addEventListener('blur', () => this.saveSelection());
+        
+        // Handle PWA installation
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            this.deferredPrompt = e;
+            if (this.installCta) this.installCta.style.display = 'block';
+        });
+
+        if (this.btnInstall) {
+            this.btnInstall.addEventListener('click', async () => {
+                if (this.deferredPrompt) {
+                    this.deferredPrompt.prompt();
+                    const { outcome } = await this.deferredPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        if (this.installCta) this.installCta.style.display = 'none';
+                    }
+                    this.deferredPrompt = null;
+                }
+            });
+        }
+
+        window.addEventListener('appinstalled', () => {
+            if (this.installCta) this.installCta.style.display = 'none';
+            this.deferredPrompt = null;
+        });
     }
 
     saveSelection() {
@@ -950,8 +980,10 @@ class DocApp {
         activeApp.pages.push(newPage);
 
         this.saveData();
-        this.hideModal();
+        this.setupEventListeners();
         this.renderNav();
+        this.loadInitialPage();
+        this.hideModal();
         this.navigateTo(id);
     }
 

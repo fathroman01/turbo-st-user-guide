@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Turbo ST User Guide</title>
     <link rel="icon" type="image/png" href="logo.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Turbo ST">
+    <meta name="theme-color" content="#2563eb">
     <meta name="description" content="Dokumentasi resmi dan panduan penggunaan aplikasi Turbo ST.">
     <link rel="stylesheet" href="style.css">
     <!-- Google Fonts -->
@@ -38,6 +43,12 @@
                     <!-- Nav items will be injected here -->
                 </ul>
             </nav>
+
+            <!-- Install App CTA -->
+            <div id="install-cta" style="margin-top: auto; padding: 1rem; background: var(--primary-light); border-radius: var(--radius); display: none;">
+                <p style="font-size: 0.75rem; color: var(--primary); font-weight: 600; margin-bottom: 0.5rem;">Akses lebih cepat?</p>
+                <button id="btn-install" class="btn btn-primary" style="width: 100%; font-size: 0.8rem; padding: 0.5rem; justify-content: center;">Instal Aplikasi</button>
+            </div>
         </aside>
 
         <!-- Main Content -->
