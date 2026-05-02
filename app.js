@@ -572,7 +572,7 @@ class DocApp {
             setTimeout(() => {
                 const el = document.getElementById(hash);
                 if (el) {
-                    const headerOffset = 80;
+                    const headerOffset = 120;
                     const elementPosition = el.getBoundingClientRect().top;
                     const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
 
@@ -609,12 +609,34 @@ class DocApp {
             });
         }
 
+        let typingTimer;
+        let isTyping = false;
         const handleInput = () => {
-            if (this.isAdminMode) this.markAsUnsaved();
+            if (this.isAdminMode) {
+                this.markAsUnsaved();
+                clearTimeout(typingTimer);
+                typingTimer = setTimeout(() => {
+                    isTyping = false;
+                }, 1000); // 1 detik pause berarti selesai mengetik batch ini
+            }
         };
+
+        const handleKeyDownForTyping = (e) => {
+            if (!this.isAdminMode) return;
+            // Ambil snapshot SEBELUM memulai batch ketikan baru
+            if (!isTyping && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                this.takeSnapshot(); 
+                isTyping = true;
+            }
+        };
+
         this.pageTitle.addEventListener('input', handleInput);
         this.pageDesc.addEventListener('input', handleInput);
         this.pageContent.addEventListener('input', handleInput);
+        
+        this.pageTitle.addEventListener('keydown', handleKeyDownForTyping);
+        this.pageDesc.addEventListener('keydown', handleKeyDownForTyping);
+        this.pageContent.addEventListener('keydown', handleKeyDownForTyping);
 
         // Prevent focus loss when clicking toolbar buttons
         this.cmsActions.addEventListener('mousedown', (e) => {
@@ -751,10 +773,38 @@ class DocApp {
         });
 
         const pasteHandler = (e) => {
-            e.preventDefault();
-            const text = (e.originalEvent || e).clipboardData.getData('text/plain');
-            document.execCommand('insertText', false, text);
-            this.markAsUnsaved();
+            if (!this.isAdminMode) return;
+            
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            let imagePasted = false;
+
+            for (let index in items) {
+                const item = items[index];
+                if (item.kind === 'file' && item.type.startsWith('image/')) {
+                    e.preventDefault();
+                    imagePasted = true;
+                    const file = item.getAsFile();
+                    
+                    const div = document.createElement('div');
+                    div.className = 'img-container';
+                    div.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);"><i data-lucide="loader" class="animate-spin" style="width: 24px; margin-bottom: 8px; display: inline-block;"></i><p>Mengunggah gambar dari clipboard...</p></div>`;
+                    this.insertAtCursor(div);
+                    lucide.createIcons();
+                    
+                    const originalContent = `<div class="img-placeholder"><i data-lucide="image" style="width: 32px;"></i><span>Klik untuk upload gambar</span></div>`;
+                    this.processImageFile(file, div, originalContent);
+                    break;
+                }
+            }
+
+            if (!imagePasted) {
+                e.preventDefault();
+                const text = (e.originalEvent || e).clipboardData.getData('text/plain');
+                if (text) {
+                    document.execCommand('insertText', false, text);
+                    this.markAsUnsaved();
+                }
+            }
         };
 
         this.pageTitle.addEventListener('paste', pasteHandler);
@@ -947,6 +997,8 @@ class DocApp {
             this.pageContent.appendChild(element);
         }
         this.markAsUnsaved();
+        this.injectAdminTools();
+        lucide.createIcons();
     }
 
     insertH2Block() {
@@ -1150,83 +1202,86 @@ class DocApp {
                 const originalContent = container.innerHTML;
                 container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);"><i data-lucide="loader" class="animate-spin" style="width: 24px; margin-bottom: 8px; display: inline-block;"></i><p>Mengunggah gambar ke Storage...</p></div>`;
                 lucide.createIcons();
-
-                try {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        const img = new Image();
-                        img.onload = async () => {
-                            const canvas = document.createElement('canvas');
-                            let width = img.width;
-                            let height = img.height;
-                            const MAX_WIDTH = 1200; // Resize image to max 1200px width
-
-                            if (width > MAX_WIDTH) {
-                                height = Math.round((height * MAX_WIDTH) / width);
-                                width = MAX_WIDTH;
-                            }
-
-                            canvas.width = width;
-                            canvas.height = height;
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0, width, height);
-
-                            // Compress to WebP or JPEG, quality 0.8
-                            const dataUrl = canvas.toDataURL('image/webp', 0.8);
-
-                            // Upload to Cloudinary
-                            try {
-                                if (CLOUDINARY_CLOUD_NAME === "ganti_dengan_cloud_name_anda" || CLOUDINARY_UPLOAD_PRESET === "ganti_dengan_upload_preset_anda") {
-                                    alert("Konfigurasi Cloudinary belum diatur! Silakan buka app.js dan isi CLOUDINARY_CLOUD_NAME serta CLOUDINARY_UPLOAD_PRESET di bagian paling atas.");
-                                    container.innerHTML = originalContent;
-                                    lucide.createIcons();
-                                    return;
-                                }
-
-                                const formData = new FormData();
-                                formData.append('file', dataUrl);
-                                formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-
-                                const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
-                                    method: 'POST',
-                                    body: formData
-                                });
-
-                                const data = await response.json();
-                                if (response.ok) {
-                                    this.updateImage(container, data.secure_url);
-                                } else {
-                                    throw new Error(data.error?.message || "Gagal mengunggah ke Cloudinary");
-                                }
-                            } catch (uploadError) {
-                                console.error("Gagal mengunggah ke Cloudinary:", uploadError);
-                                alert("Gagal mengunggah gambar ke Cloudinary! \n\nDetail Error: " + uploadError.message);
-                                container.innerHTML = originalContent;
-                                lucide.createIcons();
-                            }
-                        };
-                        img.onerror = () => {
-                            alert("Format gambar tidak didukung atau rusak.");
-                            container.innerHTML = originalContent;
-                            lucide.createIcons();
-                        };
-                        img.src = event.target.result;
-                    };
-                    reader.onerror = () => {
-                        alert("Gagal membaca file gambar.");
-                        container.innerHTML = originalContent;
-                        lucide.createIcons();
-                    };
-                    reader.readAsDataURL(file);
-                } catch (error) {
-                    console.error("Gagal memproses gambar:", error);
-                    alert("Gagal memproses gambar! Terjadi kesalahan.");
-                    container.innerHTML = originalContent;
-                    lucide.createIcons();
-                }
+                this.processImageFile(file, container, originalContent);
             }
         };
         input.click();
+    }
+
+    processImageFile(file, container, originalContent) {
+        try {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = async () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const MAX_WIDTH = 1200; // Resize image to max 1200px width
+
+                    if (width > MAX_WIDTH) {
+                        height = Math.round((height * MAX_WIDTH) / width);
+                        width = MAX_WIDTH;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Compress to WebP or JPEG, quality 0.8
+                    const dataUrl = canvas.toDataURL('image/webp', 0.8);
+
+                    // Upload to Cloudinary
+                    try {
+                        if (CLOUDINARY_CLOUD_NAME === "ganti_dengan_cloud_name_anda" || CLOUDINARY_UPLOAD_PRESET === "ganti_dengan_upload_preset_anda") {
+                            alert("Konfigurasi Cloudinary belum diatur! Silakan buka app.js dan isi CLOUDINARY_CLOUD_NAME serta CLOUDINARY_UPLOAD_PRESET di bagian paling atas.");
+                            container.innerHTML = originalContent;
+                            lucide.createIcons();
+                            return;
+                        }
+
+                        const formData = new FormData();
+                        formData.append('file', dataUrl);
+                        formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+                        const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const data = await response.json();
+                        if (response.ok) {
+                            this.updateImage(container, data.secure_url);
+                        } else {
+                            throw new Error(data.error?.message || "Gagal mengunggah ke Cloudinary");
+                        }
+                    } catch (uploadError) {
+                        console.error("Gagal mengunggah ke Cloudinary:", uploadError);
+                        alert("Gagal mengunggah gambar ke Cloudinary! \n\nDetail Error: " + uploadError.message);
+                        container.innerHTML = originalContent;
+                        lucide.createIcons();
+                    }
+                };
+                img.onerror = () => {
+                    alert("Format gambar tidak didukung atau rusak.");
+                    container.innerHTML = originalContent;
+                    lucide.createIcons();
+                };
+                img.src = event.target.result;
+            };
+            reader.onerror = () => {
+                alert("Gagal membaca file gambar.");
+                container.innerHTML = originalContent;
+                lucide.createIcons();
+            };
+            reader.readAsDataURL(file);
+        } catch (error) {
+            console.error("Gagal memproses gambar:", error);
+            alert("Gagal memproses gambar! Terjadi kesalahan.");
+            container.innerHTML = originalContent;
+            lucide.createIcons();
+        }
     }
 
     updateImage(target, url) {
@@ -1258,6 +1313,20 @@ class DocApp {
         }
     }
 
+    showLinkModal(existingLink = null) {
+        this.modalLink.style.display = 'flex';
+        this.linkTargetSelect.innerHTML = this.getAllPages().map(p => `<option value="${p.id}">${p.title}</option>`).join('');
+        
+        if (existingLink) {
+            this.editingLink = existingLink;
+            this.linkTargetSelect.value = existingLink.dataset.id;
+            this.updateLinkModalHashes(existingLink.dataset.hash);
+        } else {
+            this.editingLink = null;
+            this.updateLinkModalHashes();
+        }
+    }
+
     hideLinkModal() {
         this.modalLink.style.display = 'none';
         this.selectedRange = null;
@@ -1268,23 +1337,56 @@ class DocApp {
     applyInternalLink() {
         const targetId = this.linkTargetSelect.value;
         const targetHash = this.linkTargetHash.value || '';
+        
+        if (!targetId) {
+            alert('Silakan pilih halaman tujuan.');
+            return;
+        }
+
         if (this.editingLink) {
+            this.takeSnapshot();
             this.editingLink.dataset.id = targetId;
             this.editingLink.dataset.hash = targetHash;
             this.hideLinkModal();
-        } else if (this.selectedRange && targetId) {
+            this.markAsUnsaved();
+        } else if (this.selectedRange) {
+            this.takeSnapshot();
             const link = document.createElement('a');
             link.href = '#';
             link.className = 'internal-link';
             link.dataset.id = targetId;
             link.dataset.hash = targetHash;
-            link.innerText = this.selectedRange.toString();
+            
+            let linkText = this.selectedRange.toString().trim();
+            if (!linkText) {
+                const targetPage = this.getAllPages().find(p => p.id === targetId);
+                if (targetPage) {
+                    linkText = targetPage.title;
+                    if (targetHash) {
+                        // Cari teks dari sub-judul
+                        const temp = document.createElement('div');
+                        temp.innerHTML = targetPage.content;
+                        const headingIdx = parseInt(targetHash.replace('heading-', ''));
+                        const headings = temp.querySelectorAll('h2');
+                        if (headings[headingIdx]) {
+                            linkText += ` > ${headings[headingIdx].innerText}`;
+                        }
+                    }
+                } else {
+                    linkText = 'Link';
+                }
+            }
+            
+            link.innerText = linkText;
             this.selectedRange.deleteContents();
             this.selectedRange.insertNode(link);
+            
             this.hideLinkModal();
             lucide.createIcons();
+            this.markAsUnsaved();
+        } else {
+            alert('Silakan letakkan kursor atau pilih teks yang ingin ditautkan terlebih dahulu.');
         }
-        this.markAsUnsaved();
     }
 
     removeInternalLink() {
@@ -1394,7 +1496,11 @@ class DocApp {
     }
 
     takeSnapshot() {
-        if (this.isAdminMode) this.markAsUnsaved();
+        if (!this.isAdminMode) return;
+        this.markAsUnsaved();
+        
+        // Pastikan state DOM saat ini masuk ke this.data sebelum direkam
+        this.updateCurrentPageData(); 
         
         // Simpan snapshot data saat ini ke dalam history
         const snapshot = JSON.parse(JSON.stringify(this.data));
@@ -1403,12 +1509,13 @@ class DocApp {
             if (lastSnapshot === JSON.stringify(snapshot)) return; // Jangan simpan jika tidak ada perubahan
         }
         this.history.push(snapshot);
-        if (this.history.length > 30) this.history.shift(); // Batasi 30 langkah undo
-        this.redoStack = []; // Reset redo stack setiap ada perubahan baru
+        if (this.history.length > 100) this.history.shift(); // Maksimal 100 langkah undo (diperbesar dari 30)
+        this.redoStack = []; // Reset redo stack setiap ada aksi baru
     }
 
     undo() {
         if (this.history.length > 0) {
+            this.updateCurrentPageData(); // Sinkronkan ketikan yang belum disnapshot
             this.redoStack.push(JSON.parse(JSON.stringify(this.data)));
             this.data = this.history.pop();
             this.renderNav();
@@ -1420,6 +1527,7 @@ class DocApp {
 
     redo() {
         if (this.redoStack.length > 0) {
+            this.updateCurrentPageData(); // Sinkronkan DOM ke state saat ini
             this.history.push(JSON.parse(JSON.stringify(this.data)));
             this.data = this.redoStack.pop();
             this.renderNav();
@@ -1437,7 +1545,9 @@ class DocApp {
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = this.pageContent.innerHTML;
                 tempDiv.querySelectorAll('.btn-delete').forEach(el => el.remove());
+                tempDiv.querySelectorAll('.btn-edit-list-start').forEach(el => el.remove());
                 tempDiv.querySelectorAll('.resize-handle').forEach(el => el.remove());
+                tempDiv.querySelectorAll('.img-toolbar').forEach(el => el.remove());
 
                 page.title = this.pageTitle.innerText;
                 page.description = this.pageDesc.innerText;
@@ -1478,13 +1588,69 @@ class DocApp {
                 block.appendChild(btn);
             }
 
+            // Tambahkan tombol untuk mengubah angka awal khusus elemen OL
+            if (block.tagName === 'OL') {
+                if (!block.querySelector(':scope > .btn-edit-list-start')) {
+                    const btnEditStart = document.createElement('button');
+                    btnEditStart.className = 'btn-edit-list-start';
+                    btnEditStart.innerHTML = '<i data-lucide="hash" style="width: 14px;"></i>';
+                    btnEditStart.title = 'Ubah Angka Mulai';
+
+                    if (getComputedStyle(block).position === 'static') {
+                        block.style.position = 'relative';
+                    }
+
+                    btnEditStart.onclick = (e) => {
+                        e.stopPropagation();
+                        const currentStart = block.getAttribute('start') || '1';
+                        const newStart = prompt('Mulai langkah dari angka berapa?', currentStart);
+                        if (newStart !== null && newStart.trim() !== '' && !isNaN(parseInt(newStart))) {
+                            this.takeSnapshot();
+                            block.setAttribute('start', parseInt(newStart));
+                            this.markAsUnsaved();
+                        }
+                    };
+                    block.appendChild(btnEditStart);
+                }
+            }
+
             // Tambahkan fitur resize khusus untuk gambar
-            if (block.classList.contains('img-container') && !block.querySelector(':scope > .resize-handle')) {
-                const handle = document.createElement('div');
-                handle.className = 'resize-handle';
-                handle.title = 'Tarik untuk mengubah ukuran';
-                handle.addEventListener('mousedown', (e) => this.initResize(e, block));
-                block.appendChild(handle);
+            if (block.classList.contains('img-container')) {
+                if (!block.querySelector(':scope > .resize-handle')) {
+                    const handle = document.createElement('div');
+                    handle.className = 'resize-handle';
+                    handle.title = 'Tarik untuk mengubah ukuran';
+                    handle.addEventListener('mousedown', (e) => this.initResize(e, block));
+                    block.appendChild(handle);
+                }
+
+                if (!block.querySelector(':scope > .img-toolbar')) {
+                    const toolbar = document.createElement('div');
+                    toolbar.className = 'img-toolbar';
+                    toolbar.innerHTML = `
+                        <button class="btn-align" data-align="left" title="Rata Kiri (Disebelah Teks)"><i data-lucide="align-left" style="width: 14px;"></i></button>
+                        <button class="btn-align" data-align="center" title="Tengah"><i data-lucide="align-center" style="width: 14px;"></i></button>
+                        <button class="btn-align" data-align="right" title="Rata Kanan (Disebelah Teks)"><i data-lucide="align-right" style="width: 14px;"></i></button>
+                    `;
+                    
+                    if (block.classList.contains('align-left')) toolbar.querySelector('[data-align="left"]').classList.add('active');
+                    else if (block.classList.contains('align-right')) toolbar.querySelector('[data-align="right"]').classList.add('active');
+                    else toolbar.querySelector('[data-align="center"]').classList.add('active');
+
+                    toolbar.querySelectorAll('.btn-align').forEach(btn => {
+                        btn.onclick = (e) => {
+                            e.stopPropagation();
+                            this.takeSnapshot();
+                            block.classList.remove('align-left', 'align-right', 'align-center');
+                            block.classList.add(`align-${btn.dataset.align}`);
+                            toolbar.querySelectorAll('.btn-align').forEach(b => b.classList.remove('active'));
+                            btn.classList.add('active');
+                            this.markAsUnsaved();
+                        };
+                    });
+
+                    block.appendChild(toolbar);
+                }
             }
         });
 
@@ -1565,6 +1731,8 @@ class DocApp {
         this.takeSnapshot();
         this.saveData();
     }
+
+
 }
 
 new DocApp();

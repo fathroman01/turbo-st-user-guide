@@ -680,93 +680,116 @@ body {
 }
 
 /* Modal */
-.cms-toolbar {
+.cms-toolbar-floating {
   position: fixed;
-  top: 4rem;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.95);
+  right: 1.5rem;
+  top: 6rem;
+  width: 280px;
+  max-height: calc(100vh - 8rem);
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(10px);
-  padding: 0.35rem 0.75rem;
-  border-radius: 100px;
-  box-shadow: 0 15px 40px -10px rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  z-index: 9999;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border);
+  padding: 1.25rem;
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 0.1rem;
-  width: auto;
-  min-width: max-content;
-  max-width: 95vw;
-  white-space: nowrap;
-  animation: toolbarEnter 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-direction: column;
+  gap: 1.25rem;
+  z-index: 9999;
+  animation: slideLeft 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.btn-format {
-  width: 32px !important;
-  height: 32px !important;
-  padding: 0 !important;
+@keyframes slideLeft {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
-.toolbar-divider {
-  width: 1px;
-  height: 24px;
-  background: var(--border);
-  margin: 0 0.25rem;
+.cms-toolbar-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
 }
 
+.cms-group-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3rem;
+  margin-bottom: 0.2rem;
+}
 
-.cms-toolbar .btn-outline {
-  height: 32px;
-  min-width: 32px;
-  width: auto;
-  padding: 0 0.5rem;
+.cms-btn-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+  gap: 6px;
+}
+
+.cms-toolbar-floating .btn-outline {
+  height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: none;
-  background: transparent;
+  border-radius: 8px;
+  padding: 0;
+  background: #f8fafc;
+  border: 1px solid var(--border);
   color: var(--text-main);
-  border-radius: 50%;
   transition: all 0.2s;
   cursor: pointer;
+  width: 100%;
 }
 
-.cms-toolbar .btn-outline:hover {
+.cms-toolbar-floating .btn-outline:hover {
   background: var(--primary-light);
   color: var(--primary);
+  border-color: var(--primary);
   transform: translateY(-2px);
 }
 
-.cms-toolbar .btn-primary {
-  padding: 0.4rem 1rem;
-  border-radius: 100px;
+.cms-toolbar-floating .btn-primary {
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
   font-weight: 700;
-  font-size: 0.8rem;
-  margin-left: 0.4rem;
+  font-size: 0.9rem;
   background: linear-gradient(135deg, var(--primary), #4f46e5);
   box-shadow: 0 4px 15px rgba(79, 70, 229, 0.35);
   border: none;
   color: white;
   cursor: pointer;
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
   transition: all 0.2s;
 }
 
-.cms-toolbar .btn-primary:hover {
+.cms-toolbar-floating .btn-primary:hover {
   background: linear-gradient(135deg, #4f46e5, var(--primary));
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: 0 6px 18px rgba(79, 70, 229, 0.45);
-  color: white;
 }
 
-.toolbar-divider {
-  width: 1px;
-  height: 16px;
-  background: var(--border);
-  margin: 0 0.15rem;
-  flex-shrink: 0;
+/* Custom Scrollbar for floating toolbar */
+.cms-toolbar-floating::-webkit-scrollbar {
+  width: 6px;
+}
+.cms-toolbar-floating::-webkit-scrollbar-track {
+  background: transparent;
+}
+.cms-toolbar-floating::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 10px;
+}
+
+/* Hide TOC and adjust layout in admin mode */
+body.admin-mode .toc-container {
+  display: none !important;
+}
+
+body.admin-mode .content-area {
+  padding-right: 320px; /* Space for floating toolbar */
 }
 
 .modal-overlay {
@@ -1193,6 +1216,83 @@ body {
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
   }
 
+  body.admin-mode .content-area {
+    padding-right: 1.5rem;
+    padding-bottom: 250px;
+  }
+  
+  .cms-toolbar-floating {
+    top: auto;
+    bottom: 0;
+    right: 0;
+    width: 100%;
+    max-height: 250px;
+    border-radius: 20px 20px 0 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    padding: 1rem;
+    gap: 1rem;
+    border-bottom: none;
+    box-shadow: 0 -5px 30px rgba(0,0,0,0.15);
+    animation: slideUp 0.3s ease-out;
+  }
+  
+  .cms-toolbar-group {
+    flex: 1 1 calc(50% - 1rem);
+    min-width: 150px;
+  }
+
+  .main-wrapper {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .sidebar {
+    transform: translateX(-100%);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .top-bar-left {
+    gap: 0.5rem;
+  }
+
+  .top-bar-text {
+    font-size: 0.75rem;
+    white-space: normal;
+  }
+
+  .mobile-menu-btn {
+    display: flex;
+  }
+
+  .content-area {
+    padding: 1.5rem;
+  }
+  
+  .page-title {
+    font-size: 2rem;
+  }
+  
+  .page-description {
+    font-size: 1rem;
+  }
+
+  .page-nav {
+    flex-direction: column;
+  }
+
+  .nav-card {
+    text-align: left !important;
+  }
+
+  .toc-container {
+    display: none;
+  }
+
   .search-box:focus-within .search-input {
     width: 100%;
     opacity: 1;
@@ -1265,6 +1365,12 @@ body {
   display: block;
 }
 
+.prose::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
 .img-container {
   position: relative;
   margin: 1.5rem 0 2rem;
@@ -1272,6 +1378,60 @@ body {
   max-width: 100%;
   display: inline-block;
   vertical-align: top;
+  transition: all 0.3s ease;
+}
+
+.img-container.align-left {
+  float: left;
+  margin: 0.5rem 1.5rem 1rem 0;
+  max-width: 50%;
+}
+
+.img-container.align-right {
+  float: right;
+  margin: 0.5rem 0 1rem 1.5rem;
+  max-width: 50%;
+}
+
+.img-container.align-center {
+  display: block;
+  margin: 1.5rem auto;
+  text-align: center;
+}
+
+.img-toolbar {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: white;
+  padding: 4px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  display: none;
+  z-index: 100;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  gap: 4px;
+}
+
+.admin-mode .img-container:hover .img-toolbar {
+  display: flex;
+}
+
+.img-toolbar button {
+  background: transparent;
+  border: none;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.img-toolbar button:hover, .img-toolbar button.active {
+  background: var(--primary-light);
+  color: var(--primary);
 }
 
 .resize-handle {
@@ -1363,6 +1523,30 @@ body {
   transform: scale(1.1);
 }
 
+.btn-edit-list-start {
+  position: absolute;
+  top: 0;
+  right: 34px;
+  background: white;
+  padding: 4px;
+  border-radius: 6px;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  cursor: pointer;
+  display: none;
+  z-index: 100;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-edit-list-start:hover {
+  background: var(--primary);
+  color: white;
+  transform: scale(1.1);
+}
+
 /* Tampilkan tombol hapus saat hover di mode admin */
 .admin-mode #page-title:hover .btn-delete,
 .admin-mode #page-content h2:hover .btn-delete,
@@ -1371,6 +1555,10 @@ body {
 .admin-mode #page-content ol:hover .btn-delete,
 .admin-mode .img-container:hover .btn-delete,
 .admin-mode .callout:hover .btn-delete {
+  display: flex;
+}
+
+.admin-mode #page-content ol:hover .btn-edit-list-start {
   display: flex;
 }
 
