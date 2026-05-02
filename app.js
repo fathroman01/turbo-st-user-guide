@@ -121,6 +121,21 @@ class DocApp {
 
     async loadData() {
         try {
+            // First check if a metadata doc exists for chunks
+            const metaDoc = await db.collection('documentation').doc(DOC_ID + '_meta').get();
+            if (metaDoc.exists) {
+                const chunksCount = metaDoc.data().chunks;
+                let fullJson = '';
+                for (let i = 0; i < chunksCount; i++) {
+                    const chunk = await db.collection('documentation').doc(DOC_ID + '_chunk_' + i).get();
+                    if (chunk.exists) {
+                        fullJson += chunk.data().data;
+                    }
+                }
+                return JSON.parse(fullJson);
+            }
+
+            // Fallback to legacy single document
             const doc = await db.collection('documentation').doc(DOC_ID).get();
             if (doc.exists) {
                 return doc.data();
@@ -148,8 +163,31 @@ class DocApp {
 
         try {
             console.log("Mencoba menyimpan data ke Firestore...");
-            await db.collection('documentation').doc(DOC_ID).set(dataToSave);
-            console.log("Berhasil disimpan ke Firestore!");
+            const jsonStr = JSON.stringify(dataToSave);
+            
+            // Limit per chunk is 800KB (800000 characters) to stay safely under 1MB Firestore limit
+            const chunkSize = 800000;
+            const chunks = [];
+            for (let i = 0; i < jsonStr.length; i += chunkSize) {
+                chunks.push(jsonStr.slice(i, i + chunkSize));
+            }
+
+            // Save chunks using batch for atomic operation
+            const batch = db.batch();
+            
+            // Save metadata
+            const metaRef = db.collection('documentation').doc(DOC_ID + '_meta');
+            batch.set(metaRef, { chunks: chunks.length, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+
+            // Save each chunk
+            for (let i = 0; i < chunks.length; i++) {
+                const chunkRef = db.collection('documentation').doc(DOC_ID + '_chunk_' + i);
+                batch.set(chunkRef, { data: chunks[i] });
+            }
+
+            // Commit batch
+            await batch.commit();
+            console.log("Berhasil disimpan ke Firestore dengan " + chunks.length + " bagian!");
 
             if (showMessage) {
                 alert('Perubahan berhasil disimpan ke Cloud!');
@@ -157,7 +195,7 @@ class DocApp {
                 this.redoStack = [];
             }
 
-            localStorage.setItem('turbo_st_docs', JSON.stringify(dataToSave));
+            localStorage.setItem('turbo_st_docs', jsonStr);
         } catch (error) {
             console.error("Gagal menyimpan ke Firestore:", error);
             alert('Gagal menyimpan ke Cloud! Detail Error: ' + error.message);
