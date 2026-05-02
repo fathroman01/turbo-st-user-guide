@@ -52,6 +52,7 @@ class DocApp {
         this.btnAddImage = document.getElementById('btn-add-image');
         this.btnAddSuccess = document.getElementById('btn-add-success');
         this.btnAddCallout = document.getElementById('btn-add-callout');
+        this.btnAddCaption = document.getElementById('btn-add-caption');
         this.btnAddGreeting = document.getElementById('btn-add-greeting');
         this.btnAddGreetingBakoel = document.getElementById('btn-add-greeting-bakoel');
         this.btnAddPage = document.getElementById('btn-add-page');
@@ -720,6 +721,10 @@ class DocApp {
         this.btnConfirmLink.addEventListener('click', () => this.applyInternalLink());
         this.btnRemoveLink.addEventListener('click', () => this.removeInternalLink());
 
+        if (this.btnAddCaption) {
+            this.btnAddCaption.addEventListener('click', () => this.insertCaptionBlock());
+        }
+
         this.linkTargetSelect.addEventListener('change', () => this.updateLinkModalHashes());
 
         // Import/Export
@@ -1134,6 +1139,18 @@ class DocApp {
         div.innerHTML = `
             <div class="callout-title">⚠️ Catatan</div>
             <p>Tulis informasi atau catatan di sini...</p>
+        `;
+        this.insertAtCursor(div);
+        this.injectAdminTools();
+        lucide.createIcons();
+    }
+
+    insertCaptionBlock() {
+        const div = document.createElement('div');
+        div.className = 'caption-block';
+        div.innerHTML = `
+            <div class="caption-title">ℹ️ Keterangan</div>
+            <p>Tulis keterangan atau informasi tambahan di sini...</p>
         `;
         this.insertAtCursor(div);
         this.injectAdminTools();
@@ -1592,10 +1609,13 @@ class DocApp {
         if (!this.isAdminMode) return;
 
         // Target semua elemen blok utama di dalam konten
-        const blocks = this.pageContent.querySelectorAll('h2, p, ul, ol, .img-container, .callout');
+        const blocks = this.pageContent.querySelectorAll('h2, p, ul, ol, .img-container, .callout, .caption-block');
         blocks.forEach(block => {
             // Jangan tambahkan jika sudah ada atau jika berada di dalam blok lain (misal P di dalam callout)
-            if (block.closest('.img-container, .callout') && block.className !== 'img-container' && block.className !== 'callout') return;
+            if (block.closest('.img-container, .callout, .caption-block') && 
+                block.className !== 'img-container' && 
+                block.className !== 'callout' && 
+                block.className !== 'caption-block') return;
 
             if (!block.querySelector(':scope > .btn-delete')) {
                 const btn = document.createElement('button');

@@ -1028,15 +1028,14 @@ body.admin-mode .content-area {
 
 .prose a.internal-link {
   color: var(--primary);
-  text-decoration: none;
+  text-decoration: underline;
   font-weight: 600;
-  border-bottom: 1px dashed var(--primary);
   transition: all 0.2s;
 }
 
 .prose a.internal-link:hover {
   background: var(--primary-light);
-  border-bottom-style: solid;
+  color: var(--primary-dark);
 }
 
 .callout {
@@ -1063,6 +1062,27 @@ body.admin-mode .content-area {
 
 .callout.success .callout-title {
   color: #16a34a;
+}
+
+.caption-block {
+  padding: 1.25rem;
+  background: #f8fafc;
+  border-left: 4px solid #94a3b8;
+  border-radius: 4px 12px 12px 4px;
+  margin: 2rem 0;
+}
+
+.caption-title {
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-mode .caption-block:hover .btn-delete {
+  display: flex;
 }
 
 /* Animations */
