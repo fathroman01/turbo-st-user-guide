@@ -95,10 +95,6 @@ class DocApp {
         
         this.hasUnsavedChanges = false;
 
-        // Image Zoom
-        this.modalImageZoom = document.getElementById('modal-image-zoom');
-        this.imgZoomed = document.getElementById('img-zoomed');
-
         this.init();
     }
 
@@ -739,8 +735,6 @@ class DocApp {
             if (idx < allPages.length - 1) this.navigateTo(allPages[idx + 1].id);
         });
 
-        this.modalImageZoom.addEventListener('click', () => this.hideImageZoom());
-
         this.pageContent.addEventListener('click', (e) => {
             const internalLink = e.target.closest('.internal-link');
             if (internalLink) {
@@ -750,12 +744,6 @@ class DocApp {
                 } else {
                     this.navigateTo(internalLink.dataset.id, internalLink.dataset.hash);
                 }
-                return;
-            }
-
-            // Handle image zoom in public mode
-            if (!this.isAdminMode && e.target.tagName === 'IMG') {
-                this.zoomImage(e.target.src);
                 return;
             }
 
@@ -1408,17 +1396,6 @@ class DocApp {
             this.hideLinkModal();
             this.markAsUnsaved();
         }
-    }
-
-    zoomImage(src) {
-        this.imgZoomed.src = src;
-        this.modalImageZoom.style.display = 'flex';
-        document.body.style.overflow = 'hidden'; // Prevent scrolling while zoomed
-    }
-
-    hideImageZoom() {
-        this.modalImageZoom.style.display = 'none';
-        document.body.style.overflow = '';
     }
 
     showModal() {

@@ -1361,7 +1361,6 @@ body.admin-mode .content-area {
   margin: 0;
   box-shadow: var(--shadow);
   border: 1px solid var(--border);
-  cursor: pointer;
   display: block;
 }
 
