@@ -1365,6 +1365,10 @@ body.admin-mode .content-area {
   display: block;
 }
 
+body.admin-mode .prose img {
+  cursor: pointer;
+}
+
 .prose::after {
   content: "";
   display: table;
