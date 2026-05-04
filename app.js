@@ -73,6 +73,7 @@ class DocApp {
         this.modalAddPage = document.getElementById('modal-add-page');
         this.btnConfirmAdd = document.getElementById('btn-confirm-add-page');
         this.btnCancelModal = document.getElementById('btn-cancel-modal');
+        this.newPageGroupSelect = document.getElementById('new-page-group');
 
         this.modalLink = document.getElementById('modal-link');
         this.btnConfirmLink = document.getElementById('btn-confirm-link');
@@ -250,7 +251,7 @@ class DocApp {
                         <span class="group-icon-wrapper ${this.isAdminMode ? 'editable-icon' : ''}" title="${this.isAdminMode ? 'Klik untuk ganti ikon' : ''}">
                             <i data-lucide="${app.icon || 'layout'}" style="width: 18px;"></i>
                         </span>
-                        <span>${app.name}</span>
+                        <span ${this.isAdminMode ? 'contenteditable="true"' : ''}>${app.name}</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         ${this.isAdminMode ? `
@@ -288,7 +289,7 @@ class DocApp {
             }
 
             group.querySelector('.nav-group-title').addEventListener('click', (e) => {
-                if (this.isAdminMode && (e.target.closest('.group-drag-handle') || e.target.closest('.group-icon-wrapper') || e.target.closest('.btn-delete-group'))) {
+                if (this.isAdminMode && (e.target.closest('.group-drag-handle') || e.target.closest('.group-icon-wrapper') || e.target.closest('.btn-delete-group') || e.target.contentEditable === 'true')) {
                     return;
                 }
 
@@ -310,7 +311,7 @@ class DocApp {
                     dragHandle.addEventListener('mouseenter', () => group.draggable = true);
                     dragHandle.addEventListener('mouseleave', () => group.draggable = false);
                 }
-                const titleSpan = group.querySelector('.nav-group-title span[contenteditable="true"]') || group.querySelector('.nav-group-title span:last-child');
+                const titleSpan = group.querySelector('.nav-group-title .group-title-left span[contenteditable="true"]');
                 if (titleSpan) {
                     titleSpan.addEventListener('blur', (e) => {
                         group.draggable = false;
@@ -978,13 +979,12 @@ class DocApp {
         };
 
         this.takeSnapshot();
-        const activeApp = this.data.apps[0]; 
+        const selectedGroupId = this.newPageGroupSelect.value;
+        const activeApp = this.data.apps.find(a => a.id === selectedGroupId) || this.data.apps[0]; 
         activeApp.pages.push(newPage);
 
         this.markAsUnsaved();
-        this.setupEventListeners();
         this.renderNav();
-        this.loadInitialPage();
         this.hideModal();
         this.navigateTo(id);
     }
@@ -1445,6 +1445,26 @@ class DocApp {
 
     showModal() {
         this.modalAddPage.style.display = 'flex';
+        
+        // Populate group selection
+        if (this.newPageGroupSelect) {
+            this.newPageGroupSelect.innerHTML = this.data.apps.map(app => 
+                `<option value="${app.id}">${app.name}</option>`
+            ).join('');
+            
+            // Default to current app if possible
+            let currentAppId = null;
+            this.data.apps.forEach(app => {
+                if (app.pages.find(p => p.id === this.currentPageId)) {
+                    currentAppId = app.id;
+                }
+            });
+            
+            if (currentAppId) {
+                this.newPageGroupSelect.value = currentAppId;
+            }
+        }
+        
         document.getElementById('new-page-title').focus();
     }
 
