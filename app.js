@@ -273,7 +273,7 @@ class DocApp {
                     const newIcon = prompt('Masukkan nama ikon Lucide untuk Grup ini (contoh: zap, box, shopping-bag, database):', currentIcon);
                     if (newIcon) {
                         app.icon = newIcon;
-                        this.saveData();
+                        this.markAsUnsaved();
                         this.renderNav();
                     }
                 });
@@ -315,7 +315,7 @@ class DocApp {
                     titleSpan.addEventListener('blur', (e) => {
                         group.draggable = false;
                         app.name = e.target.innerText;
-                        this.saveData();
+                        this.markAsUnsaved();
                     });
                 }
             }
@@ -380,7 +380,7 @@ class DocApp {
                         textSpan.addEventListener('blur', () => {
                             li.draggable = false;
                             page.title = textSpan.innerText;
-                            this.saveData();
+                            this.markAsUnsaved();
                         });
                     }
                 }
@@ -396,9 +396,8 @@ class DocApp {
                     if (btnToggleHidden) {
                         e.stopPropagation();
                         e.preventDefault();
-                        this.takeSnapshot();
                         page.hidden = !page.hidden;
-                        this.saveData();
+                        this.markAsUnsaved();
                         this.renderNav();
                         return;
                     }
@@ -497,7 +496,7 @@ class DocApp {
             targetApp.pages.splice(targetPageIndex, 0, page);
 
             this.takeSnapshot();
-            this.saveData();
+            this.markAsUnsaved();
             this.renderNav();
         } else if (sourceType === 'group' && targetType === 'group') {
             if (sourceAppId === targetAppId) return;
@@ -509,7 +508,7 @@ class DocApp {
             this.data.apps.splice(targetAppIndex, 0, app);
 
             this.takeSnapshot();
-            this.saveData();
+            this.markAsUnsaved();
             this.renderNav();
         }
     }
@@ -902,9 +901,8 @@ class DocApp {
 
     async deleteGroup(id, name) {
         if (confirm(`Apakah Anda yakin ingin menghapus seluruh grup "${name}" beserta isinya?`)) {
-            this.takeSnapshot();
             this.data.apps = this.data.apps.filter(app => app.id !== id);
-            await this.saveData();
+            this.markAsUnsaved();
 
             let pageExists = false;
             this.data.apps.forEach(app => {
@@ -938,7 +936,7 @@ class DocApp {
                 ]
             };
             this.data.apps.push(newApp);
-            this.saveData();
+            this.markAsUnsaved();
             this.renderNav();
         }
     }
@@ -947,9 +945,8 @@ class DocApp {
         if (confirm('Apakah Anda yakin ingin menghapus bab ini?')) {
             const app = this.data.apps.find(a => a.id === appId);
             if (app) {
-                this.takeSnapshot();
                 app.pages = app.pages.filter(p => p.id !== id);
-                await this.saveData();
+                this.markAsUnsaved();
                 if (this.currentPageId === id) {
                     this.navigateTo(app.pages[0]?.id || 'beranda');
                 } else {
@@ -981,10 +978,10 @@ class DocApp {
         };
 
         this.takeSnapshot();
-        const activeApp = this.data.apps[0]; // Tambahkan ke aplikasi pertama secara default atau yang sedang dibuka
+        const activeApp = this.data.apps[0]; 
         activeApp.pages.push(newPage);
 
-        this.saveData();
+        this.markAsUnsaved();
         this.setupEventListeners();
         this.renderNav();
         this.loadInitialPage();
@@ -1339,7 +1336,6 @@ class DocApp {
         this.injectAdminTools();
         lucide.createIcons();
         this.updateCurrentPageData();
-        this.saveData();
         this.markAsUnsaved();
     }
 
@@ -1781,7 +1777,7 @@ class DocApp {
         document.removeEventListener('mouseup', this.onMouseUp);
 
         this.takeSnapshot();
-        this.saveData();
+        this.markAsUnsaved();
     }
 
 
