@@ -62,10 +62,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #c59d3f;
-  padding: 5px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(197, 157, 63, 0.3);
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
   flex-shrink: 0;
 }
 
@@ -418,7 +417,7 @@ body {
 
 .top-bar-text {
   font-weight: 700;
-  color: #c59d3f;
+  color: #000000;
   font-size: 0.95rem;
   letter-spacing: 0.02em;
   text-align: left;
@@ -543,7 +542,7 @@ body {
 .toc-link {
   text-decoration: none;
   font-size: 0.875rem;
-  color: #c59d3f;
+  color: #3b82f6;
   transition: all 0.2s;
   display: block;
   white-space: nowrap;
@@ -552,7 +551,7 @@ body {
 }
 
 .toc-link:hover {
-  color: #b08b35;
+  color: #2563eb;
   transform: translateX(4px);
 }
 
@@ -1281,8 +1280,8 @@ body.admin-mode .content-area {
   }
 
   .top-bar-text {
-    font-size: 0.75rem;
-    white-space: normal;
+    font-size: 0.7rem;
+    white-space: nowrap;
   }
 
   .mobile-menu-btn {
@@ -1368,8 +1367,9 @@ body.admin-mode .content-area {
     font-size: 0.75rem;
   }
   .top-bar-text {
-    font-size: 0.85rem;
-    line-height: 1.3;
+    font-size: 0.65rem;
+    line-height: 1;
+    white-space: nowrap;
   }
 }
 

@@ -5,23 +5,9 @@ import { initialData } from './data.js';
 const CLOUDINARY_CLOUD_NAME = "de7amw1ca";
 const CLOUDINARY_UPLOAD_PRESET = "turbo_upload";
 
-// --- KONFIGURASI FIREBASE ---
-// Ganti dengan konfigurasi dari Firebase Console Anda!
-const firebaseConfig = {
-    apiKey: "AIzaSyCAHB2w_pIVkvwfKCxkMOVSFaRKTGu9JRo",
-    authDomain: "turbo-st-docs.firebaseapp.com",
-    databaseURL: "https://turbo-st-docs-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "turbo-st-docs",
-    storageBucket: "turbo-st-docs.firebasestorage.app",
-    messagingSenderId: "653814096123",
-    appId: "1:653814096123:web:fef2df2361b928dbbe505e"
-};
-
-// Inisialisasi Firebase
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const storage = firebase.storage();
-const DOC_ID = "turbo_st_documentation_data"; // ID Dokumen tunggal untuk menyimpan seluruh data
+// --- KONFIGURASI PENYIMPANAN ---
+const DATA_URL = 'data.json';
+const SAVE_URL = 'save_data.php';
 
 class DocApp {
     constructor() {
@@ -97,16 +83,13 @@ class DocApp {
         
         this.hasUnsavedChanges = false;
 
-        // PWA Install
-        this.deferredPrompt = null;
-        this.installCta = document.getElementById('install-cta');
-        this.btnInstall = document.getElementById('btn-install');
+
 
         this.init();
     }
 
     async init() {
-        console.log("Menghubungkan ke Cloud Firestore...");
+        console.log("Menghubungkan ke Server Hosting...");
         this.data = await this.loadData();
 
         if (this.data) {
@@ -114,47 +97,31 @@ class DocApp {
             this.renderPage(this.currentPageId);
             this.setupEventListeners();
             lucide.createIcons();
-            console.log("Data berhasil dimuat dari Cloud!");
+            console.log("Data berhasil dimuat dari Server!");
 
             // Check admin session
             if (sessionStorage.getItem('isAdminLoggedIn') === 'true') {
                 this.enableAdminMode();
             }
         } else {
-            console.error("Gagal memuat data. Periksa konfigurasi Firebase Anda.");
-            alert("Gagal terhubung ke Cloud. Pastikan API Key sudah benar.");
+            console.error("Gagal memuat data. Periksa file data.json di hosting Anda.");
+            alert("Gagal terhubung ke Server. Pastikan file save_data.php dan data.json sudah diunggah.");
         }
     }
 
     async loadData() {
         try {
-            // First check if a metadata doc exists for chunks
-            const metaDoc = await db.collection('documentation').doc(DOC_ID + '_meta').get();
-            if (metaDoc.exists) {
-                const chunksCount = metaDoc.data().chunks;
-                let fullJson = '';
-                for (let i = 0; i < chunksCount; i++) {
-                    const chunk = await db.collection('documentation').doc(DOC_ID + '_chunk_' + i).get();
-                    if (chunk.exists) {
-                        fullJson += chunk.data().data;
-                    }
-                }
-                return JSON.parse(fullJson);
-            }
-
-            // Fallback to legacy single document
-            const doc = await db.collection('documentation').doc(DOC_ID).get();
-            if (doc.exists) {
-                return doc.data();
+            // Coba ambil dari data.json di server
+            const response = await fetch(DATA_URL + '?t=' + Date.now());
+            if (response.ok) {
+                return await response.json();
             } else {
-                console.log("Database Cloud kosong, menggunakan data awal...");
-                // Simpan data awal ke cloud jika belum ada
-                await this.saveData(initialData, false);
+                console.log("File data.json belum ada di server, menggunakan data awal...");
                 return initialData;
             }
         } catch (error) {
-            console.error("Error loading data from Firestore:", error);
-            // Fallback ke localStorage jika cloud gagal agar tetap bisa jalan
+            console.error("Error loading data from Server:", error);
+            // Fallback ke localStorage jika server gagal
             const saved = localStorage.getItem('turbo_st_docs');
             return saved ? JSON.parse(saved) : initialData;
         }
@@ -169,43 +136,33 @@ class DocApp {
         this.btnSave.disabled = true;
 
         try {
-            console.log("Mencoba menyimpan data ke Firestore...");
+            console.log("Mencoba menyimpan data ke Server Hosting...");
             const jsonStr = JSON.stringify(dataToSave);
             
-            // Limit per chunk is 800KB (800000 characters) to stay safely under 1MB Firestore limit
-            const chunkSize = 800000;
-            const chunks = [];
-            for (let i = 0; i < jsonStr.length; i += chunkSize) {
-                chunks.push(jsonStr.slice(i, i + chunkSize));
+            const response = await fetch(SAVE_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: jsonStr
+            });
+
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                console.log("Berhasil disimpan ke Hosting!");
+                if (showMessage) {
+                    alert('Perubahan berhasil disimpan ke Server Hosting!');
+                    this.history = [];
+                    this.redoStack = [];
+                }
+                localStorage.setItem('turbo_st_docs', jsonStr);
+            } else {
+                throw new Error(result.message || 'Gagal menyimpan');
             }
-
-            // Save chunks using batch for atomic operation
-            const batch = db.batch();
-            
-            // Save metadata
-            const metaRef = db.collection('documentation').doc(DOC_ID + '_meta');
-            batch.set(metaRef, { chunks: chunks.length, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-
-            // Save each chunk
-            for (let i = 0; i < chunks.length; i++) {
-                const chunkRef = db.collection('documentation').doc(DOC_ID + '_chunk_' + i);
-                batch.set(chunkRef, { data: chunks[i] });
-            }
-
-            // Commit batch
-            await batch.commit();
-            console.log("Berhasil disimpan ke Firestore dengan " + chunks.length + " bagian!");
-
-            if (showMessage) {
-                alert('Perubahan berhasil disimpan ke Cloud!');
-                this.history = [];
-                this.redoStack = [];
-            }
-
-            localStorage.setItem('turbo_st_docs', jsonStr);
         } catch (error) {
-            console.error("Gagal menyimpan ke Firestore:", error);
-            alert('Gagal menyimpan ke Cloud! Detail Error: ' + error.message);
+            console.error("Gagal menyimpan ke Hosting:", error);
+            alert('Gagal menyimpan ke Server! Detail Error: ' + error.message);
             localStorage.setItem('turbo_st_docs', JSON.stringify(dataToSave));
         } finally {
             this.markAsSaved();
@@ -231,6 +188,7 @@ class DocApp {
     renderNav() {
         this.navMenu.innerHTML = '';
         this.data.apps.forEach(app => {
+            if (!this.isAdminMode && app.hidden) return;
             const group = document.createElement('div');
             group.className = 'nav-group';
             if (this.isAdminMode) {
@@ -241,7 +199,7 @@ class DocApp {
                 group.addEventListener('dragleave', (e) => this.handleDragLeave(e));
             }
             group.innerHTML = `
-                <div class="nav-group-title" data-group-id="${app.id}">
+                <div class="nav-group-title ${app.hidden ? 'is-hidden' : ''}" data-group-id="${app.id}">
                     <div class="group-title-left" style="display: flex; align-items: center; gap: 0.75rem;">
                         ${this.isAdminMode ? `
                             <span class="group-drag-handle" title="Geser urutan grup" style="cursor: grab; color: var(--text-muted); display: inline-flex; align-items: center;">
@@ -249,13 +207,16 @@ class DocApp {
                             </span>
                         ` : ''}
                         <span class="group-icon-wrapper ${this.isAdminMode ? 'editable-icon' : ''}" title="${this.isAdminMode ? 'Klik untuk ganti ikon' : ''}">
-                            <i data-lucide="${app.icon || 'layout'}" style="width: 18px;"></i>
+                            <i data-lucide="${app.icon || 'layout'}" style="width: 24px;"></i>
                         </span>
                         <span ${this.isAdminMode ? 'contenteditable="true"' : ''}>${app.name}</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         ${this.isAdminMode ? `
-                            <button class="btn-delete-group" data-delete-group="${app.id}" title="Hapus Seluruh Grup">
+                            <button class="btn-toggle-hidden-group" data-toggle-hidden-group="${app.id}" title="${app.hidden ? 'Publish Nama Aplikasi' : 'Sembunyikan Nama Aplikasi (Draft)'}" style="background: ${app.hidden ? '#fef08a' : 'transparent'}; color: ${app.hidden ? '#ca8a04' : 'var(--text-muted)'}; border: none; border-radius: 4px; padding: 4px; display: flex; align-items: center;">
+                                <i data-lucide="${app.hidden ? 'eye-off' : 'eye'}" style="width: 14px;"></i>
+                            </button>
+                            <button class="btn-delete-group" data-delete-group="${app.id}" title="Hapus Nama Aplikasi">
                                 <i data-lucide="trash-2" style="width: 14px;"></i>
                             </button>
                         ` : ''}
@@ -286,10 +247,20 @@ class DocApp {
                         this.deleteGroup(app.id, app.name);
                     });
                 }
+
+                const btnToggleHiddenGroup = group.querySelector('.btn-toggle-hidden-group');
+                if (btnToggleHiddenGroup) {
+                    btnToggleHiddenGroup.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        app.hidden = !app.hidden;
+                        this.markAsUnsaved();
+                        this.renderNav();
+                    });
+                }
             }
 
             group.querySelector('.nav-group-title').addEventListener('click', (e) => {
-                if (this.isAdminMode && (e.target.closest('.group-drag-handle') || e.target.closest('.group-icon-wrapper') || e.target.closest('.btn-delete-group') || e.target.contentEditable === 'true')) {
+                if (this.isAdminMode && (e.target.closest('.group-drag-handle') || e.target.closest('.group-icon-wrapper') || e.target.closest('.btn-delete-group') || e.target.closest('.btn-toggle-hidden-group') || e.target.contentEditable === 'true')) {
                     return;
                 }
 
@@ -532,11 +503,13 @@ class DocApp {
         this.pageDesc.innerText = page.description;
         this.pageContent.innerHTML = page.content;
 
-        this.breadcrumbApp.innerText = currentApp.name;
-        this.breadcrumbApp.onclick = (e) => {
-            e.preventDefault();
-            this.navigateTo(currentApp.pages[0].id);
-        };
+        if (this.breadcrumbApp) {
+            this.breadcrumbApp.innerText = currentApp.name;
+            this.breadcrumbApp.onclick = (e) => {
+                e.preventDefault();
+                this.navigateTo(currentApp.pages[0].id);
+            };
+        }
         this.breadcrumb.innerText = page.title;
 
         this.renderTOC();
@@ -733,16 +706,14 @@ class DocApp {
 
         this.navPrev.addEventListener('click', (e) => {
             e.preventDefault();
-            const allPages = this.getAllPages();
-            const idx = allPages.findIndex(p => p.id === this.currentPageId);
-            if (idx > 0) this.navigateTo(allPages[idx - 1].id);
+            const prevId = this.navPrev.dataset.prevId;
+            if (prevId) this.navigateTo(prevId);
         });
 
         this.navNext.addEventListener('click', (e) => {
             e.preventDefault();
-            const allPages = this.getAllPages();
-            const idx = allPages.findIndex(p => p.id === this.currentPageId);
-            if (idx < allPages.length - 1) this.navigateTo(allPages[idx + 1].id);
+            const nextId = this.navNext.dataset.nextId;
+            if (nextId) this.navigateTo(nextId);
         });
 
         this.pageContent.addEventListener('click', (e) => {
@@ -829,29 +800,7 @@ class DocApp {
         this.pageContent.addEventListener('blur', () => this.saveSelection());
         
         // Handle PWA installation
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            this.deferredPrompt = e;
-            if (this.installCta) this.installCta.style.display = 'block';
-        });
 
-        if (this.btnInstall) {
-            this.btnInstall.addEventListener('click', async () => {
-                if (this.deferredPrompt) {
-                    this.deferredPrompt.prompt();
-                    const { outcome } = await this.deferredPrompt.userChoice;
-                    if (outcome === 'accepted') {
-                        if (this.installCta) this.installCta.style.display = 'none';
-                    }
-                    this.deferredPrompt = null;
-                }
-            });
-        }
-
-        window.addEventListener('appinstalled', () => {
-            if (this.installCta) this.installCta.style.display = 'none';
-            this.deferredPrompt = null;
-        });
     }
 
     saveSelection() {
@@ -919,7 +868,7 @@ class DocApp {
     }
 
     addGroup() {
-        const name = prompt('Masukkan Nama Aplikasi/Grup Baru:', 'Aplikasi Baru');
+        const name = prompt('Masukkan Nama Aplikasi Baru:', 'Aplikasi Baru');
         if (name) {
             this.takeSnapshot();
             const id = name.toLowerCase().replace(/\s+/g, '-');
@@ -931,7 +880,7 @@ class DocApp {
                     {
                         id: 'home-' + Date.now(),
                         title: 'Beranda ' + name,
-                        description: 'Selamat datang di grup ' + name,
+                        description: 'Selamat datang di panduan ' + name,
                         content: '<p>Mulai tulis panduan Anda di sini...</p>'
                     }
                 ]
@@ -1210,27 +1159,41 @@ class DocApp {
     }
 
     renderPagination() {
-        const allPages = this.getAllPages();
-        const idx = allPages.findIndex(p => p.id === this.currentPageId);
+        let currentApp = null;
+        this.data.apps.forEach(app => {
+            if (app.pages.find(p => p.id === this.currentPageId)) currentApp = app;
+        });
+
+        if (!currentApp) return;
+
+        const appPages = this.isAdminMode ? currentApp.pages : currentApp.pages.filter(p => !p.hidden);
+        const idx = appPages.findIndex(p => p.id === this.currentPageId);
 
         if (idx > 0) {
+            const prevPage = appPages[idx - 1];
             this.navPrev.style.visibility = 'visible';
-            document.getElementById('nav-prev-title').innerText = allPages[idx - 1].title;
+            this.navPrev.dataset.prevId = prevPage.id;
+            document.getElementById('nav-prev-title').innerText = prevPage.title;
         } else {
             this.navPrev.style.visibility = 'hidden';
+            delete this.navPrev.dataset.prevId;
         }
 
-        if (idx < allPages.length - 1) {
+        if (idx < appPages.length - 1) {
+            const nextPage = appPages[idx + 1];
             this.navNext.style.visibility = 'visible';
-            document.getElementById('nav-next-title').innerText = allPages[idx + 1].title;
+            this.navNext.dataset.nextId = nextPage.id;
+            document.getElementById('nav-next-title').innerText = nextPage.title;
         } else {
             this.navNext.style.visibility = 'hidden';
+            delete this.navNext.dataset.nextId;
         }
     }
 
     getAllPages(includeHidden = this.isAdminMode) {
         let pages = [];
         this.data.apps.forEach(app => {
+            if (!includeHidden && app.hidden) return;
             const visiblePages = includeHidden ? app.pages : app.pages.filter(p => !p.hidden);
             pages = [...pages, ...visiblePages];
         });
@@ -1752,7 +1715,7 @@ class DocApp {
             this.markAsSaved();
             this.renderNav();
             this.renderPage(this.currentPageId);
-            console.log("Perubahan dibatalkan. Data telah dikembalikan ke versi terakhir di Cloud.");
+            console.log("Perubahan dibatalkan. Data telah dikembalikan ke versi terakhir di Server.");
         }
     }
 
